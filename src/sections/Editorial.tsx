@@ -6,7 +6,7 @@ const posts = [
     title: "Buy Or Rent? Find The Right Outfit For Your Next Celebration",
     author: "Savija Shan",
     time: "2 min read",
-    image: "/img/products/bridal-lehenga.jpg",
+    image: "/img/products/bridal-lehenga.webp",
     to: "/category/womens-wear",
   },
   {
@@ -14,7 +14,7 @@ const posts = [
     title: "The Story of Benarasi Silk — One Weft At A Time",
     author: "Editorial Desk",
     time: "4 min read",
-    image: "/img/about/fabric.jpg",
+    image: "/img/about/fabric.webp",
     to: "/about",
   },
   {
@@ -22,7 +22,7 @@ const posts = [
     title: "Why Circular Fashion Matters For Ethnic Wear",
     author: "Priya K.",
     time: "3 min read",
-    image: "/img/categories/dance-costumes.jpg",
+    image: "/img/categories/dance-costumes.webp",
     to: "/category/dance-costumes",
   },
 ];

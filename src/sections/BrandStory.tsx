@@ -11,7 +11,7 @@ export default function BrandStory() {
         {/* Image */}
         <div className="reveal-left overflow-hidden">
           <img
-            src="/img/hero/about-hero.jpg"
+            src="/img/hero/about-hero.webp"
             alt="Our heritage story"
             loading="lazy"
             className="w-full aspect-[4/5] md:aspect-[4/4] object-cover hover:scale-[1.03] transition-transform duration-[1400ms] ease-[cubic-bezier(.2,.8,.2,1)]"

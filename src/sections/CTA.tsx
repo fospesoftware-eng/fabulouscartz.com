@@ -16,7 +16,7 @@ export default function CTA() {
     <section id="sell" className="relative overflow-hidden">
       {/* FULL-WIDTH BACKGROUND PHOTOGRAPH */}
       <img
-        src="/img/hero/seller.jpg"
+        src="/img/hero/seller.webp"
         alt="A consignor arranging hand-embroidered lehengas in her boutique"
         className="absolute inset-0 w-full h-full object-cover"
         style={{ objectPosition: "62% 45%" }}

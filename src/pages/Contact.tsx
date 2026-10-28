@@ -25,7 +25,7 @@ export default function Contact() {
       {/* CINEMATIC HERO */}
       <section className="relative min-h-[65svh] flex items-center overflow-hidden">
         <div className="absolute inset-0">
-          <img src="/img/hero/craft.jpg" alt="" className="w-full h-full object-cover object-center scale-110" />
+          <img src="/img/hero/craft.webp" alt="" className="w-full h-full object-cover object-center scale-110" />
           <div aria-hidden className="absolute inset-0" style={{ background: "linear-gradient(135deg, rgba(10,12,10,0.55) 0%, rgba(10,12,10,0.85) 100%)" }} />
         </div>
         <div className="ultra relative text-white py-16">

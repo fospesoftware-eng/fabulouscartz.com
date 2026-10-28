@@ -43,7 +43,7 @@ export const categories: Category[] = [
     tagline: "Little celebrations, big memories",
     description:
       "Festival & wedding outfits, traditional ethnic wear, dance costumes, and everyday essentials for babies, girls and boys.",
-    image: "/img/products/kids-ethnic.jpg",
+    image: "/img/products/kids-ethnic.webp",
     accent: "#2E8B57",
     count: 48,
   },
@@ -53,7 +53,7 @@ export const categories: Category[] = [
     tagline: "Crafted by hand, worn by heart",
     description:
       "Necklaces, earrings, bracelets, anklets and statement pieces — all handcrafted by independent artisans.",
-    image: "/img/categories/handmade-jewelry.jpg",
+    image: "/img/categories/handmade-jewelry.webp",
     accent: "#B8913A",
     count: 36,
   },
@@ -63,7 +63,7 @@ export const categories: Category[] = [
     tagline: "Sarees, lehengas, kurtas — celebrated",
     description:
       "From the bridal lehenga to the office kurta, find your next piece among classic and contemporary styles.",
-    image: "/img/products/bridal-lehenga.jpg",
+    image: "/img/products/bridal-lehenga.webp",
     accent: "#B56A4D",
     count: 62,
   },
@@ -73,7 +73,7 @@ export const categories: Category[] = [
     tagline: "Stage-ready, culture-driven",
     description:
       "Bharatanatyam, Kathak, Odissi and folk — costumes that honor tradition and feel performance-ready.",
-    image: "/img/categories/dance-costumes.jpg",
+    image: "/img/categories/dance-costumes.webp",
     accent: "#0F4A2D",
     count: 18,
   },
@@ -83,7 +83,7 @@ export const categories: Category[] = [
     tagline: "Kurta, sherwani, and occasion wear",
     description:
       "Classic kurtas, sherwanis, and festive outfits designed for every cultural moment.",
-    image: "/img/categories/mens-wear.jpg",
+    image: "/img/categories/mens-wear.webp",
     accent: "#25231F",
     count: 28,
   },
@@ -93,7 +93,7 @@ export const categories: Category[] = [
     tagline: "The finish to every look",
     description:
       "Clutches, bangles, bindis, and hair adornments that complete the story of your outfit.",
-    image: "/img/categories/accessories.jpg",
+    image: "/img/categories/accessories.webp",
     accent: "#B8913A",
     count: 22,
   },
@@ -109,7 +109,7 @@ export const products: Product[] = [
     reviews: 28,
     category: "womens-wear",
     mode: "both",
-    image: "/img/products/bridal-lehenga.jpg",
+    image: "/img/products/bridal-lehenga.webp",
     accentColor: "#8E1F2B",
     description:
       "A deep crimson bridal lehenga with hand-worked gold zardozi borders and a sheer dupatta — made for the mandap.",
@@ -133,7 +133,7 @@ export const products: Product[] = [
     reviews: 19,
     category: "womens-wear",
     mode: "both",
-    image: "/img/products/indo-western-gown.jpg",
+    image: "/img/products/indo-western-gown.webp",
     accentColor: "#B8913A",
     description:
       "Modern cut with traditional motifs — a gown that bridges two worlds.",
@@ -151,7 +151,7 @@ export const products: Product[] = [
     reviews: 12,
     category: "handmade-jewelry",
     mode: "buy",
-    image: "/img/products/silver-jewelry.jpg",
+    image: "/img/products/silver-jewelry.webp",
     accentColor: "#9C9688",
     description:
       "A silver-plated necklace and earring set, hand-polished for a luminous finish.",
@@ -168,7 +168,7 @@ export const products: Product[] = [
     reviews: 34,
     category: "womens-wear",
     mode: "both",
-    image: "/img/products/punjabi-kurta-v2.jpg",
+    image: "/img/products/punjabi-kurta-v2.webp",
     accentColor: "#B56A4D",
     description:
       "A cotton-linen kurta with Phulkari-inspired embroidery on the sleeves and yoke.",
@@ -185,7 +185,7 @@ export const products: Product[] = [
     reviews: 9,
     category: "womens-wear",
     mode: "both",
-    image: "/img/products/ethnic-anarkali.jpg",
+    image: "/img/products/ethnic-anarkali.webp",
     accentColor: "#1B6B43",
     description:
       "A vibrant Anarkali set in silk-cotton with subtle mirror work.",
@@ -202,7 +202,7 @@ export const products: Product[] = [
     reviews: 22,
     category: "womens-wear",
     mode: "buy",
-    image: "/img/products/saree-blouse.jpg",
+    image: "/img/products/saree-blouse.webp",
     accentColor: "#6A4F1B",
     description:
       "A stretchable cotton-spandex blouse that fits most body types with comfort.",
@@ -218,7 +218,7 @@ export const products: Product[] = [
     reviews: 15,
     category: "kids-wear",
     mode: "both",
-    image: "/img/products/kids-ethnic.jpg",
+    image: "/img/products/kids-ethnic.webp",
     accentColor: "#FAF6F0",
     description:
       "A serene cotton frock with lace trims — perfect for baby showers and ceremonies.",
@@ -235,7 +235,7 @@ export const products: Product[] = [
     reviews: 41,
     category: "womens-wear",
     mode: "buy",
-    image: "/img/products/long-kurthi.jpg",
+    image: "/img/products/long-kurthi.webp",
     accentColor: "#8DC79B",
     description:
       "A floor-length kurthi in pastel sage with intricate hand block prints.",
@@ -252,7 +252,7 @@ export const products: Product[] = [
     reviews: 27,
     category: "kids-wear",
     mode: "both",
-    image: "/img/products/kids-ethnic.jpg",
+    image: "/img/products/kids-ethnic.webp",
     accentColor: "#7A3F2B",
     description:
       "A sharara set with delicate mirror and thread embroidery — little one ready for the wedding.",
@@ -269,7 +269,7 @@ export const products: Product[] = [
     reviews: 18,
     category: "kids-wear",
     mode: "rent",
-    image: "/img/products/kids-ethnic.jpg",
+    image: "/img/products/kids-ethnic.webp",
     accentColor: "#B8913A",
     description:
       "A miniature bridal lehenga in crimson and gold — intricate enough to feel real, sized to feel hers.",
@@ -286,7 +286,7 @@ export const products: Product[] = [
     reviews: 8,
     category: "handmade-jewelry",
     mode: "buy",
-    image: "/img/products/beach-charm-bracelet.jpg",
+    image: "/img/products/beach-charm-bracelet.webp",
     accentColor: "#D4B156",
     description:
       "A gold-tone beaded bracelet with a lobster clasp, beach-inspired and light enough for every day.",
@@ -303,7 +303,7 @@ export const products: Product[] = [
     reviews: 12,
     category: "handmade-jewelry",
     mode: "buy",
-    image: "/img/products/crystal-earrings.jpg",
+    image: "/img/products/crystal-earrings.webp",
     accentColor: "#C8E3CD",
     description:
       "Clear crystal earrings cut and set by hand — delicate angels that catch every light.",
@@ -320,7 +320,7 @@ export const products: Product[] = [
     reviews: 6,
     category: "handmade-jewelry",
     mode: "buy",
-    image: "/img/products/navy-earrings.jpg",
+    image: "/img/products/navy-earrings.webp",
     accentColor: "#25231F",
     description:
       "Deep navy cluster earrings, strung by hand with seed beads and tiny Czech crystals.",
@@ -336,7 +336,7 @@ export const products: Product[] = [
     reviews: 10,
     category: "handmade-jewelry",
     mode: "buy",
-    image: "/img/products/boho-bracelet.jpg",
+    image: "/img/products/boho-bracelet.webp",
     accentColor: "#1B6B43",
     description:
       "A memory wire bracelet that wraps around the wrist — red, gold and green, holiday-ready.",
@@ -352,7 +352,7 @@ export const products: Product[] = [
     reviews: 14,
     category: "handmade-jewelry",
     mode: "buy",
-    image: "/img/products/red-statement-set.jpg",
+    image: "/img/products/red-statement-set.webp",
     accentColor: "#7A3F2B",
     description:
       "A silver-tone statement set with vivid red beads — the kind of set that owns the room.",
@@ -369,7 +369,7 @@ export const products: Product[] = [
     reviews: 7,
     category: "handmade-jewelry",
     mode: "buy",
-    image: "/img/products/purple-memory-wire.jpg",
+    image: "/img/products/purple-memory-wire.webp",
     accentColor: "#6A4C93",
     description:
       "A multi-purple memory wire bracelet with clusters of seed beads and Czech fire-polished crystals.",
@@ -385,7 +385,7 @@ export const products: Product[] = [
     reviews: 9,
     category: "handmade-jewelry",
     mode: "buy",
-    image: "/img/products/clay-necklace.jpg",
+    image: "/img/products/clay-necklace.webp",
     accentColor: "#1B6B43",
     description:
       "A sculptural necklace strung from hand-shaped air-dry clay beads, painted and glazed — wearable art.",

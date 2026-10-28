@@ -29,7 +29,7 @@ export default function About() {
       {/* CINEMATIC HERO */}
       <section className="relative min-h-[85svh] flex items-center overflow-hidden">
         <div className="absolute inset-0">
-          <img src="/img/hero/about-hero.jpg" alt="" className="w-full h-full object-cover object-center scale-110 about-parallax" />
+          <img src="/img/hero/about-hero.webp" alt="" className="w-full h-full object-cover object-center scale-110 about-parallax" />
           <div aria-hidden className="absolute inset-0" style={{ background: "linear-gradient(135deg, rgba(8,48,28,0.55) 0%, rgba(10,12,10,0.75) 100%)" }} />
         </div>
 
@@ -51,7 +51,7 @@ export default function About() {
         <div className="story-reveal grid md:grid-cols-12 gap-10 items-center">
           <div className="md:col-span-5 md:col-start-1">
             <div className="aspect-[4/5] overflow-hidden cinematic">
-              <img src="/img/about/artisan-weaver.jpg" alt="" className="about-parallax w-full h-full object-cover" />
+              <img src="/img/about/artisan-weaver.webp" alt="" className="about-parallax w-full h-full object-cover" />
               <div className="grain" />
             </div>
           </div>
@@ -72,7 +72,7 @@ export default function About() {
         <div className="story-reveal grid md:grid-cols-12 gap-10 items-center">
           <div className="md:col-span-5 md:col-start-8 md:[order-2]">
             <div className="aspect-[4/5] overflow-hidden cinematic">
-              <img src="/img/about/loom.jpg" alt="" className="about-parallax w-full h-full object-cover" />
+              <img src="/img/about/loom.webp" alt="" className="about-parallax w-full h-full object-cover" />
               <div className="grain" />
             </div>
           </div>
@@ -93,7 +93,7 @@ export default function About() {
         <div className="story-reveal grid md:grid-cols-12 gap-10 items-center">
           <div className="md:col-span-5 md:col-start-1">
             <div className="aspect-[4/5] overflow-hidden cinematic">
-              <img src="/img/about/artisan-2.jpg" alt="" className="about-parallax w-full h-full object-cover" />
+              <img src="/img/about/artisan-2.webp" alt="" className="about-parallax w-full h-full object-cover" />
               <div className="grain" />
             </div>
           </div>
@@ -115,7 +115,7 @@ export default function About() {
       <section className="section-xl ultra">
         <div className="grid md:grid-cols-2 gap-6 md:gap-8">
           <div className="story-reveal relative min-h-[420px] overflow-hidden group">
-            <img src="/img/about/fabric.jpg" alt="" className="absolute inset-0 w-full h-full object-cover transition-transform duration-[1500ms] ease-out group-hover:scale-[1.04]" />
+            <img src="/img/about/fabric.webp" alt="" className="absolute inset-0 w-full h-full object-cover transition-transform duration-[1500ms] ease-out group-hover:scale-[1.04]" />
             <div aria-hidden className="absolute inset-0" style={{ background: "linear-gradient(180deg, rgba(8,48,28,0.2) 0%, rgba(8,48,28,0.85) 100%)" }} />
             <div className="relative h-full flex flex-col justify-end p-10 md:p-14 text-white">
               <div className="text-[0.62rem] tracking-[0.4em] uppercase text-[#F3E5B8] opacity-80 mb-4">Our Mission</div>
@@ -128,7 +128,7 @@ export default function About() {
             </div>
           </div>
           <div className="story-reveal relative min-h-[420px] overflow-hidden group">
-            <img src="/img/hero/craft.jpg" alt="" className="absolute inset-0 w-full h-full object-cover transition-transform duration-[1500ms] ease-out group-hover:scale-[1.04]" />
+            <img src="/img/hero/craft.webp" alt="" className="absolute inset-0 w-full h-full object-cover transition-transform duration-[1500ms] ease-out group-hover:scale-[1.04]" />
             <div aria-hidden className="absolute inset-0" style={{ background: "linear-gradient(180deg, rgba(106,79,27,0.25) 0%, rgba(106,79,27,0.85) 100%)" }} />
             <div className="relative h-full flex flex-col justify-end p-10 md:p-14 text-[var(--ink-inv)]">
               <div className="text-[0.62rem] tracking-[0.4em] uppercase text-white/85 mb-4">Our Vision</div>

@@ -33,9 +33,11 @@ export default function Hero() {
       {/* FULL-BLEED CAMPAIGN IMAGE */}
       <div className="hero-media absolute inset-0">
         <img
-          src="/img/hero/home-hero.jpg"
+          src="/img/hero/home-hero.webp"
           alt="Fabulous Cartz — Heritage Edit"
           className="w-full h-full object-cover object-[center_30%]"
+          fetchPriority="high"
+          decoding="async"
           draggable={false}
         />
         {/* Whisper of legibility at the base — no heavy gradients */}
