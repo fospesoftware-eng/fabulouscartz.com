@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="ringA" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#6A4F1B"/>
+      <stop offset="50%" stop-color="#B8913A"/>
+      <stop offset="100%" stop-color="#E6CE85"/>
+    </linearGradient>
+    <linearGradient id="ringB" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0%" stop-color="#08301C"/>
+      <stop offset="60%" stop-color="#1B6B43"/>
+      <stop offset="100%" stop-color="#4EA766"/>
+    </linearGradient>
+    <linearGradient id="leaf" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#2E8B57"/>
+      <stop offset="100%" stop-color="#1B6B43"/>
+    </linearGradient>
+    <linearGradient id="sheen" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="rgba(255,255,255,0)" />
+      <stop offset="45%" stop-color="rgba(255,255,255,0.6)" />
+      <stop offset="55%" stop-color="rgba(255,255,255,0.6)" />
+      <stop offset="100%" stop-color="rgba(255,255,255,0)" />
+    </linearGradient>
+    <filter id="soft3d" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="3" />
+      <feOffset dx="0" dy="4" />
+      <feComponentTransfer>
+        <feFuncA type="linear" slope="0.45" />
+      </feComponentTransfer>
+      <feMerge>
+        <feMergeNode />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Outer thick emerald ring -->
+  <circle cx="256" cy="256" r="210" fill="none" stroke="url(#ringB)" stroke-width="28" filter="url(#soft3d)" />
+  <!-- Inner emerald ring thinner -->
+  <circle cx="256" cy="256" r="175" fill="none" stroke="url(#ringB)" stroke-width="6" opacity="0.75" />
+
+  <!-- Gold accent ring top half -->
+  <path d="M 60 256 A 196 196 0 0 1 452 256" fill="none" stroke="url(#ringA)" stroke-width="10" stroke-linecap="round" />
+  <!-- Gold accent ring bottom half thinner -->
+  <path d="M 88 256 A 168 168 0 0 0 424 256" fill="none" stroke="url(#ringA)" stroke-width="3" opacity="0.6" />
+
+  <!-- The F monogram (serif F with curved stem suggesting wheel/cart) -->
+  <g transform="translate(256,256)" filter="url(#soft3d)">
+    <!-- Vertical stroke (thick serif F stem) -->
+    <path d="M -22 -130 L -22 110 C -22 130 -10 142 10 142 C 30 142 42 130 42 110 L 42 -130 Z" fill="url(#ringB)" />
+    <!-- Top serif cap -->
+    <path d="M -38 -130 L -38 -148 C -38 -158 -28 -162 -10 -162 C 10 -162 22 -158 22 -148 L 22 -130 Z" fill="url(#ringB)" />
+    <!-- Top bar of F -->
+    <path d="M -22 -82 L 56 -82 C 70 -82 74 -74 74 -64 C 74 -54 66 -46 56 -46 L -22 -46 Z" fill="url(#ringB)" />
+    <!-- Middle bar of F (half-width) -->
+    <path d="M -22 -10 L 36 -10 C 48 -10 52 -4 52 4 C 52 14 44 20 34 20 L -22 20 Z" fill="url(#ringB)" />
+    <!-- Gold highlight on F stem -->
+    <rect x="-18" y="-128" width="6" height="236" fill="url(#ringA)" opacity="0.9" rx="2" />
+  </g>
+
+  <!-- Decorative dots at 4 cardinal points -->
+  <circle cx="256" cy="46"  r="8" fill="url(#ringA)" />
+  <circle cx="466" cy="256" r="8" fill="url(#ringA)" />
+  <circle cx="256" cy="466" r="8" fill="url(#ringA)" />
+  <circle cx="46"  cy="256" r="8" fill="url(#ringA)" />
+
+  <!-- Top sheen sweep for liquid-metal effect -->
+  <rect x="40" y="40" width="432" height="432" fill="url(#sheen)" opacity="0.35" rx="220" ry="220" pointer-events="none">
+    <animate attributeName="y" values="40;460;40" dur="4.5s" repeatCount="indefinite" />
+    <animate attributeName="opacity" values="0;0.35;0.35;0" dur="4.5s" repeatCount="indefinite" />
+  </rect>
+</svg>

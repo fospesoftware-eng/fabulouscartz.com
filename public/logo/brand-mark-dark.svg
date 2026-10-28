@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <!-- Fabulous Cartz — Interlocked FC seal (dark theme, glowing) -->
+  <defs>
+    <linearGradient id="goldD" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#D4B156"/>
+      <stop offset="0.5" stop-color="#F3E5B8"/>
+      <stop offset="1" stop-color="#E6CE85"/>
+    </linearGradient>
+    <linearGradient id="mintD" x1="0" y1="0" x2="0.8" y2="1">
+      <stop offset="0" stop-color="#8FD4AE"/>
+      <stop offset="1" stop-color="#2E8A56"/>
+    </linearGradient>
+    <filter id="haloD" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="1.4" result="b"/>
+      <feMerge>
+        <feMergeNode in="b"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Medallion — glowing double hairline -->
+  <g filter="url(#haloD)">
+    <circle cx="32" cy="32" r="29" stroke="url(#goldD)" stroke-width="1.7"/>
+    <circle cx="32" cy="32" r="26" stroke="url(#goldD)" stroke-width="0.7" opacity="0.6"/>
+  </g>
+
+  <!-- Crescent C — mint on dark -->
+  <path d="M42.9 16.4 A19 19 0 1 0 42.9 47.6 L39.7 43.1 A13.5 13.5 0 1 1 39.7 20.9 Z"
+        fill="url(#mintD)"/>
+
+  <!-- Calligraphic F — champagne gold -->
+  <g fill="url(#goldD)" filter="url(#haloD)">
+    <path d="M29.2 18 H33.2 V46 H29.2 Z"/>
+    <path d="M27.4 18 H34.9 V20.3 H27.4 Z"/>
+    <path d="M27.4 43.7 H34.9 V46 H27.4 Z"/>
+    <path d="M33.2 18 H44.6 C46.4 18 47.3 19 47.3 21.2 V23.6 H45.2 V21.8 C45.2 20.9 44.7 20.4 43.8 20.4 H33.2 Z"/>
+    <path d="M33.2 29 H41.2 C42.2 29 42.9 29.7 42.9 31 C42.9 32.3 42.2 33 41.2 33 H33.2 Z"/>
+  </g>
+
+  <!-- Diamond riding the seal base -->
+  <path d="M32 57.2 l3 3 -3 3 -3 -3 Z" fill="url(#goldD)"/>
+</svg>

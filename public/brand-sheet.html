@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Fabulous Cartz — Brand Sheet</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet" />
+    <style>
+      :root {
+        --cream: #FAF6F0;
+        --ink: #141310;
+        --emerald: #0F4A2D;
+        --emerald-2: #1B6B43;
+        --emerald-mint: #8DC79B;
+        --gold-deep: #6A4F1B;
+        --gold: #B8913A;
+        --gold-light: #F3E5B8;
+        --rose: #B56A4D;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: var(--cream);
+        color: var(--ink);
+        font-family: "Inter", system-ui, sans-serif;
+        font-size: 16px;
+        line-height: 1.6;
+        -webkit-font-smoothing: antialiased;
+      }
+      .container { max-width: 1200px; margin: 0 auto; padding: 5rem 2.5rem; }
+      h1, h2, h3 { font-family: "Playfair Display", Georgia, serif; font-weight: 500; margin: 0; }
+      h1 { font-size: clamp(3rem, 7vw, 5.5rem); line-height: 1; }
+      h2 { font-size: clamp(1.75rem, 3vw, 2.5rem); margin-bottom: 2rem; }
+      h3 { font-size: 1.4rem; }
+      .eyebrow { font-size: 0.7rem; letter-spacing: 0.32em; text-transform: uppercase; color: var(--emerald); font-weight: 600; }
+      .divider { height: 1px; background: rgba(20,19,16,0.1); margin: 4rem 0; }
+      .divider.thin { margin: 1.5rem 0; }
+      section { margin-bottom: 6rem; }
+
+      /* HERO */
+      .hero {
+        min-height: 60vh;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 4rem;
+        align-items: center;
+      }
+      @media (max-width: 800px) { .hero { grid-template-columns: 1fr; } }
+      .hero h1 em {
+        font-style: italic;
+        background: linear-gradient(135deg,#6A4F1B,#B8913A,#F3E5B8);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+      }
+      .hero p.lead { font-family: "Cormorant Garamond", Georgia, serif; font-size: 1.35rem; font-style: italic; opacity: 0.75; margin: 1.5rem 0 0; }
+      .hero-mark {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        aspect-ratio: 1;
+        border-radius: 50%;
+        background: radial-gradient(circle at 30% 30%, #F3E5B8 0%, #FAF6F0 60%);
+        box-shadow: 0 40px 80px -20px rgba(15,74,45,0.25);
+      }
+      .hero-mark img { width: 70%; height: auto; }
+
+      /* LOGO */
+      .logo-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 1.5rem;
+      }
+      .logo-card {
+        border: 1px solid rgba(20,19,16,0.12);
+        border-radius: 16px;
+        padding: 2.5rem 2rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1.25rem;
+      }
+      .logo-card.dark {
+        background: #141310; color: #FAF6F0; border-color: rgba(243,229,184,0.18);
+      }
+      .logo-card.small { padding: 1.5rem; }
+      .logo-card .preview {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 180px;
+      }
+      .logo-card .preview img { max-width: 100%; max-height: 120px; }
+      .logo-card.dark .preview img { filter: brightness(1.8) drop-shadow(0 0 12px rgba(212,177,86,0.5)); }
+      .logo-card .label { font-size: 0.7rem; letter-spacing: 0.22em; text-transform: uppercase; opacity: 0.65; }
+
+      /* PALETTE */
+      .palette-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 1rem;
+      }
+      .swatch {
+        border-radius: 14px;
+        overflow: hidden;
+        border: 1px solid rgba(20,19,16,0.08);
+      }
+      .swatch .chip { height: 110px; }
+      .swatch .meta { padding: 1rem; }
+      .swatch .name { font-weight: 600; font-size: 0.9rem; }
+      .swatch .hex { font-family: ui-monospace, monospace; font-size: 0.78rem; opacity: 0.65; margin-top: 2px; }
+
+      /* TYPOGRAPHY */
+      .typo-spec { display: grid; grid-template-columns: 1fr auto; gap: 2rem; padding: 1.5rem 0; border-bottom: 1px solid rgba(20,19,16,0.1); }
+      .typo-spec .sample { font-family: "Playfair Display", Georgia, serif; font-weight: 500; font-size: 4rem; line-height: 1; }
+      .typo-spec .sample.serif { font-family: "Cormorant Garamond", Georgia, serif; font-weight: 400; font-style: italic; font-size: 2rem; }
+      .typo-spec .sample.sans { font-family: "Inter", sans-serif; font-weight: 600; font-size: 1rem; letter-spacing: 0.3em; text-transform: uppercase; }
+      .typo-spec .info { font-size: 0.78rem; opacity: 0.7; text-align: right; font-family: ui-monospace, monospace; }
+
+      /* SPACING */
+      .spacing-row { display: flex; gap: 1rem; align-items: flex-end; }
+      .spacing-row .box { background: var(--emerald); border-radius: 6px; }
+      .spacing-row .box.gold { background: var(--gold); }
+      .spacing-row div { text-align: center; }
+      .spacing-row div span { display: block; margin-top: 0.5rem; font-size: 0.72rem; opacity: 0.65; font-family: ui-monospace, monospace; }
+
+      /* FOOTER */
+      footer {
+        background: #141310;
+        color: #FAF6F0;
+        padding: 4rem 2.5rem;
+        text-align: center;
+      }
+      footer em { color: var(--gold-light); font-style: italic; }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <!-- HERO -->
+      <div class="hero">
+        <div>
+          <div class="eyebrow">Brand Identity · v1.0</div>
+          <h1>
+            Fabulous<br />
+            <em>Cartz</em>
+          </h1>
+          <p class="lead">A shared closet for Indian ethnic wear — circular, artisan, luxurious.</p>
+        </div>
+        <div class="hero-mark">
+          <img src="/logo/brand-mark.svg" alt="Fabulous Cartz mark" />
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- SECTION: LOGOS -->
+      <section>
+        <h2>Logo System</h2>
+        <p style="opacity:0.7; max-width:60ch; margin-bottom:2.5rem;">
+          The crest pairs a layered emerald ring (echo of a cartwheel, a bangle, a cycle) with a
+          gold F-monogram. Background-free at all sizes so it adapts to both light and dark
+          themes. Never stretch or distort — scale proportionally.
+        </p>
+        <div class="logo-grid">
+          <div class="logo-card">
+            <div class="label">Primary Mark · Light</div>
+            <div class="preview"><img src="/logo/brand-mark.svg" alt="" /></div>
+            <div class="label">brand-mark.svg (scalable)</div>
+          </div>
+          <div class="logo-card dark">
+            <div class="label">Primary Mark · Dark</div>
+            <div class="preview"><img src="/logo/brand-mark.svg" alt="" /></div>
+            <div class="label">Same asset — adapts to surface</div>
+          </div>
+          <div class="logo-card">
+            <div class="label">Wordmark · Horizontal</div>
+            <div class="preview"><img src="/logo/brand-wordmark.svg" alt="" /></div>
+            <div class="label">brand-wordmark.svg</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECTION: PALETTE -->
+      <section>
+        <h2>Color System</h2>
+        <p style="opacity:0.7; max-width:60ch; margin-bottom:2.5rem;">
+          Three families — Emerald (brand + craft), Gold (luxury + heritage), Rose (celebration) —
+          built on a cream/ink foundation. Gradients are preferred over flat black or flat green.
+        </p>
+
+        <h3 style="margin-bottom:1rem;">Foundation</h3>
+        <div class="palette-grid">
+          <div class="swatch"><div class="chip" style="background:#FAF6F0"></div><div class="meta"><div class="name">Cream</div><div class="hex">#FAF6F0</div></div></div>
+          <div class="swatch"><div class="chip" style="background:#F5EFE4"></div><div class="meta"><div class="name">Cream Soft</div><div class="hex">#F5EFE4</div></div></div>
+          <div class="swatch"><div class="chip" style="background:#141310"></div><div class="meta"><div class="name">Ink</div><div class="hex">#141310</div></div></div>
+          <div class="swatch"><div class="chip" style="background:#25231F"></div><div class="meta"><div class="name">Ink 2</div><div class="hex">#25231F</div></div></div>
+        </div>
+
+        <h3 style="margin-bottom:1rem; margin-top:3rem;">Emerald · The Brand</h3>
+        <div class="palette-grid">
+          <div class="swatch"><div class="chip" style="background:#08301C"></div><div class="meta"><div class="name">Emerald 700</div><div class="hex">#08301C</div></div></div>
+          <div class="swatch"><div class="chip" style="background:#0F4A2D"></div><div class="meta"><div class="name">Emerald 600</div><div class="hex">#0F4A2D</div></div></div>
+          <div class="swatch"><div class="chip" style="background:#1B6B43"></div><div class="meta"><div class="name">Emerald 500</div><div class="hex">#1B6B43</div></div></div>
+          <div class="swatch"><div class="chip" style="background:#2E8B57"></div><div class="meta"><div class="name">Emerald 400</div><div class="hex">#2E8B57</div></div></div>
+          <div class="swatch"><div class="chip" style="background:#8DC79B"></div><div class="meta"><div class="name">Mint 200</div><div class="hex">#8DC79B</div></div></div>
+          <div class="swatch"><div class="chip" style="background:#EAF4EC"></div><div class="meta"><div class="name">Mint 50</div><div class="hex">#EAF4EC</div></div></div>
+        </div>
+
+        <h3 style="margin-bottom:1rem; margin-top:3rem;">Gold · The Luxury</h3>
+        <div class="palette-grid">
+          <div class="swatch"><div class="chip" style="background:#6A4F1B"></div><div class="meta"><div class="name">Gold Deep</div><div class="hex">#6A4F1B</div></div></div>
+          <div class="swatch"><div class="chip" style="background:#8E6B27"></div><div class="meta"><div class="name">Gold 500</div><div class="hex">#8E6B27</div></div></div>
+          <div class="swatch"><div class="chip" style="background:#B8913A"></div><div class="meta"><div class="name">Gold 400</div><div class="hex">#B8913A</div></div></div>
+          <div class="swatch"><div class="chip" style="background:#D4B156"></div><div class="meta"><div class="name">Gold 300</div><div class="hex">#D4B156</div></div></div>
+          <div class="swatch"><div class="chip" style="background:#E6CE85"></div><div class="meta"><div class="name">Gold 200</div><div class="hex">#E6CE85</div></div></div>
+          <div class="swatch"><div class="chip" style="background:#F3E5B8"></div><div class="meta"><div class="name">Gold 100</div><div class="hex">#F3E5B8</div></div></div>
+        </div>
+
+        <h3 style="margin-bottom:1rem; margin-top:3rem;">Gradient Combinations</h3>
+        <div class="palette-grid">
+          <div class="swatch"><div class="chip" style="background:linear-gradient(135deg,#0F4A2D 0%,#1B6B43 50%,#2E8B57 100%)"></div><div class="meta"><div class="name">Primary Emerald</div><div class="hex">#0F4A2D → #2E8B57</div></div></div>
+          <div class="swatch"><div class="chip" style="background:linear-gradient(135deg,#6A4F1B 0%,#B8913A 50%,#F3E5B8 100%)"></div><div class="meta"><div class="name">Liquid Gold</div><div class="hex">#6A4F1B → #F3E5B8</div></div></div>
+          <div class="swatch"><div class="chip" style="background:linear-gradient(135deg,#D18A6E 0%,#B56A4D 50%,#7A3F2B 100%)"></div><div class="meta"><div class="name">Celebration Rose</div><div class="hex">#D18A6E → #7A3F2B</div></div></div>
+        </div>
+      </section>
+
+      <!-- SECTION: TYPOGRAPHY -->
+      <section>
+        <h2>Typography</h2>
+        <p style="opacity:0.7; max-width:60ch; margin-bottom:2.5rem;">
+          Three-typeface system. Display heads use Playfair Display for editorial gravitas.
+          Cormorant Garamond Italic delivers the brand voice (stories, poetry, emphasis).
+          Inter is the workhorse UI face.
+        </p>
+
+        <div class="typo-spec">
+          <div class="sample">Celebration</div>
+          <div class="info">Playfair Display · Medium 500<br/>Display · 4rem / 1</div>
+        </div>
+        <div class="typo-spec">
+          <div class="sample serif">Every outfit has a story.</div>
+          <div class="info">Cormorant Garamond · Italic 400<br/>Editorial · 2rem / 1.3</div>
+        </div>
+        <div class="typo-spec">
+          <div class="sample sans">Circular · Ethnic · Luxury</div>
+          <div class="info">Inter · SemiBold 600<br/>Eyebrow · 1rem / 0.3em tracking</div>
+        </div>
+        <div class="typo-spec">
+          <div style="max-width:50ch; opacity:0.75; font-size:1rem; line-height:1.75">
+            It started at home. The founder noticed something meaningful in everyday life —
+            his wife's wardrobe was filled with stunning Indian ethnic wear. Silk sarees,
+            intricately crafted lehengas, elegant churidars.
+          </div>
+          <div class="info">Inter · Regular 400<br/>Body · 1rem / 1.6</div>
+        </div>
+      </section>
+
+      <!-- SECTION: SPACING -->
+      <section>
+        <h2>Spacing System</h2>
+        <p style="opacity:0.7; max-width:60ch; margin-bottom:2.5rem;">
+          Built on an 8px grid. Section padding alternates between <code>py-24</code> and
+          <code>py-32</code> for natural rhythm. Container max-width: 1440px.
+        </p>
+        <div class="spacing-row">
+          <div><div class="box" style="width:8px;height:8px"></div><span>8px</span></div>
+          <div><div class="box" style="width:16px;height:16px"></div><span>16px</span></div>
+          <div><div class="box" style="width:24px;height:24px"></div><span>24px</span></div>
+          <div><div class="box" style="width:32px;height:32px"></div><span>32px</span></div>
+          <div><div class="box" style="width:48px;height:48px"></div><span>48px</span></div>
+          <div><div class="box" style="width:64px;height:64px"></div><span>64px</span></div>
+          <div><div class="box gold" style="width:96px;height:96px"></div><span>96px</span></div>
+          <div><div class="box gold" style="width:128px;height:128px"></div><span>128px</span></div>
+        </div>
+      </section>
+    </div>
+
+    <footer>
+      <h2 style="color:#FAF6F0;">Fabulous <em>Cartz</em></h2>
+      <p style="opacity:0.75; margin-top:1rem;">Brand Sheet · v1.0 · 2026</p>
+    </footer>
+  </body>
+</html>

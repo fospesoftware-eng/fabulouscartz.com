@@ -1,0 +1,680 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================================
+   FABULOUS CARTZ — LUXURY DESIGN SYSTEM v2
+   Principles:
+   - Macro negative space
+   - No card chrome (no borders, no shadows on cards)
+   - Massive serif + hairline sans tension
+   - Full-bleed imagery with floating text
+   - Section rhythm: image → whitespace → text → whitespace → image
+   ============================================================ */
+
+:root {
+  --bg: #FAF6F0;
+  --bg-soft: #F5EFE4;
+  --bg-panel: #FFFFFF;
+  --bg-elev: #FDFAF4;
+  --ink: #1A1714;
+  --ink-soft: #6B6558;
+  --ink-muted: #9E9889;
+  --ink-inv: #FAF6F0;
+
+  --line: rgba(26, 23, 20, 0.08);
+  --line-strong: rgba(26, 23, 20, 0.18);
+
+  --emerald: #0F4A2D;
+  --emerald-2: #1B6B43;
+  --emerald-soft: #8DC79B;
+  --gold: #B8913A;
+  --gold-2: #D4B156;
+  --gold-deep: #6A4F1B;
+  --rose: #D18A6E;
+
+  --gradient-gold: linear-gradient(135deg, #6A4F1B 0%, #B8913A 50%, #E6CE85 100%);
+  --gradient-emerald: linear-gradient(135deg, #08301C 0%, #0F4A2D 50%, #1B6B43 100%);
+
+  --font-display: "Playfair Display", Georgia, serif;
+  --font-serif: "Cormorant Garamond", Georgia, serif;
+  --font-sans: "Inter", system-ui, sans-serif;
+}
+
+html.dark {
+  --bg: #0C100E;
+  --bg-soft: #111814;
+  --bg-panel: #141C18;
+  --bg-elev: #18221C;
+  --ink: #EDE8DF;
+  --ink-soft: #A69F92;
+  --ink-muted: #6B6558;
+  --ink-inv: #0C100E;
+  --line: rgba(237, 232, 223, 0.07);
+  --line-strong: rgba(237, 232, 223, 0.16);
+  --emerald: #8DC79B;
+  --emerald-2: #4EA766;
+  --emerald-soft: #2E8B57;
+  --gold: #E6CE85;
+  --gold-2: #F3E5B8;
+  --gold-deep: #D4B156;
+  --gradient-gold: linear-gradient(135deg, #6A4F1B 0%, #B8913A 50%, #F3E5B8 100%);
+  --gradient-emerald: linear-gradient(135deg, #08301C 0%, #0F4A2D 50%, #4EA766 100%);
+}
+
+/* BASE */
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  margin: 0; padding: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  transition: background-color 500ms ease, color 500ms ease;
+  font-weight: 300;
+}
+
+#root { min-height: 100svh; }
+img { display: block; max-width: 100%; }
+a { color: inherit; text-decoration: none; }
+button { font-family: inherit; }
+
+html.lenis { height: auto; }
+.lenis.lenis-smooth { scroll-behavior: auto; }
+.lenis.lenis-smooth [data-lenis-prevent] { overscroll-behavior: contain; }
+
+@media (max-width: 768px) { body { font-size: 15px; } }
+
+/* ---- MOBILE FOUNDATION ---- */
+html, body { overflow-x: clip; }
+* { -webkit-tap-highlight-color: transparent; }
+
+/* horizontal rails: no scrollbar, native momentum, snap */
+.h-scroll {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+}
+.h-scroll::-webkit-scrollbar { display: none; width: 0; height: 0; }
+
+@media (max-width: 640px) {
+  .section-xl { padding-block: 3.75rem; }
+  .section-lg { padding-block: 3rem; }
+  .ultra, .narrow, .tight { padding-inline: 1.25rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ============================================================
+   LAYOUT
+   ============================================================ */
+.ultra { width: 100%; max-width: 1560px; margin-inline: auto; padding-inline: clamp(1.25rem, 4vw, 4rem); }
+.narrow { width: 100%; max-width: 1200px; margin-inline: auto; padding-inline: clamp(1.25rem, 4vw, 3rem); }
+.tight { width: 100%; max-width: 820px; margin-inline: auto; padding-inline: clamp(1.25rem, 4vw, 3rem); }
+
+/* ============================================================
+   TYPOGRAPHY — LUXURY SCALE
+   ============================================================ */
+/* Micro-eyebrow: ultra-wide-track sans */
+.micro {
+  font-family: var(--font-sans);
+  font-size: 0.65rem;
+  font-weight: 400;
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+  color: var(--gold-deep);
+}
+
+/* Body eyebrow: serif italic */
+.eyebrow {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 1.05rem;
+  font-weight: 400;
+  color: var(--emerald);
+}
+
+/* Massive display — the money shot */
+.massive {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: clamp(4rem, 14vw, 16rem);
+  line-height: 0.85;
+  letter-spacing: -0.035em;
+}
+
+.display-xl {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: clamp(3.5rem, 10vw, 10rem);
+  line-height: 0.9;
+  letter-spacing: -0.03em;
+}
+.display-lg {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: clamp(2.5rem, 6vw, 6rem);
+  line-height: 0.95;
+  letter-spacing: -0.02em;
+}
+.display-md {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: clamp(1.75rem, 3.5vw, 3rem);
+  line-height: 1.05;
+}
+
+/* Hairline serif italic — editorial */
+.hairline {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-weight: 300;
+  letter-spacing: 0.02em;
+}
+
+/* Shimmer */
+.shimmer {
+  background: linear-gradient(90deg, #8B6914 0%, #D4B156 25%, #F3E5B8 50%, #D4B156 75%, #8B6914 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: shimmer 6s linear infinite;
+}
+@keyframes shimmer {
+  0% { background-position: 0% center; }
+  100% { background-position: 200% center; }
+}
+
+.gold-gradient {
+  background: var(--gradient-gold);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* ============================================================
+   BUTTONS — MINIMAL
+   ============================================================ */
+.btn-underline {
+  font-family: var(--font-sans);
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  position: relative;
+  color: var(--ink);
+  transition: color 300ms ease;
+}
+.btn-underline::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 100%;
+  bottom: -4px;
+  height: 1px;
+  background: currentColor;
+  transition: right 400ms cubic-bezier(.2,.8,.2,1);
+}
+.btn-underline:hover { color: var(--emerald); }
+.btn-underline:hover::after { right: 0; }
+
+.btn-circle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 999px;
+  border: 1px solid var(--ink);
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  transition: all 400ms cubic-bezier(.2,.8,.2,1);
+}
+.btn-circle:hover { background: var(--ink); color: var(--ink-inv); transform: scale(1.05); }
+
+.btn-fill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 2rem;
+  background: var(--ink);
+  color: var(--ink-inv);
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  border: none;
+  cursor: pointer;
+  transition: all 400ms cubic-bezier(.2,.8,.2,1);
+}
+.btn-fill:hover { background: var(--emerald); transform: translateY(-2px); }
+
+.btn-outline {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 2rem;
+  background: transparent;
+  color: var(--ink);
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  border: 1px solid var(--ink);
+  cursor: pointer;
+  transition: all 400ms cubic-bezier(.2,.8,.2,1);
+}
+.btn-outline:hover { background: var(--ink); color: var(--ink-inv); }
+
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.9rem 1.75rem;
+  background: var(--gradient-emerald);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  border: none;
+  cursor: pointer;
+  border-radius: 999px;
+  transition: transform 300ms ease;
+}
+.btn-primary:hover { transform: translateY(-2px); }
+
+/* ============================================================
+   MARQUEE
+   ============================================================ */
+.marquee-wrap {
+  overflow: hidden;
+  border-block: 1px solid var(--line-strong);
+  background: var(--bg);
+}
+.marquee-track {
+  display: flex;
+  width: max-content;
+  animation: marquee 35s linear infinite;
+  gap: 4rem;
+  padding-block: 1.25rem;
+}
+.marquee-item {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+.marquee-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--gold);
+}
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+/* ============================================================
+   REVEAL ANIMATIONS
+   ============================================================ */
+.reveal { opacity: 0; transform: translateY(48px); transition: opacity 900ms ease, transform 900ms cubic-bezier(.2,.7,.2,1); }
+.reveal.is-visible { opacity: 1; transform: translateY(0); }
+
+.reveal-left { opacity: 0; transform: translateX(-48px); transition: opacity 900ms ease, transform 900ms cubic-bezier(.2,.7,.2,1); }
+.reveal-left.is-visible { opacity: 1; transform: translateX(0); }
+
+.reveal-right { opacity: 0; transform: translateX(48px); transition: opacity 900ms ease, transform 900ms cubic-bezier(.2,.7,.2,1); }
+.reveal-right.is-visible { opacity: 1; transform: translateX(0); }
+
+/* ============================================================
+   CURSOR GLOW
+   ============================================================ */
+.cursor-glow {
+  position: fixed;
+  top: 0; left: 0;
+  width: 420px; height: 420px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(184,145,58,0.12) 0%, transparent 70%);
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  mix-blend-mode: multiply;
+  z-index: 1;
+  transition: opacity 400ms ease;
+  opacity: 0;
+}
+html.dark .cursor-glow {
+  background: radial-gradient(circle, rgba(212,177,86,0.1) 0%, transparent 70%);
+  mix-blend-mode: screen;
+}
+.cursor-glow.is-active { opacity: 1; }
+
+/* ============================================================
+   CINEMATIC IMAGE TREATMENT — apply to all <img> in hero/sections
+   ============================================================ */
+.cinematic {
+  position: relative;
+}
+.cinematic::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    145deg,
+    rgba(0,0,0,0.06) 0%,
+    transparent 40%,
+    transparent 60%,
+    rgba(0,0,0,0.1) 100%
+  );
+}
+.cinematic img {
+  transition: transform 1.2s cubic-bezier(.2,.8,.2,1);
+}
+.cinematic:hover img {
+  transform: scale(1.06);
+}
+
+/* ============================================================
+   PRODUCT CARD — ART GALLERY STYLE (no chrome)
+   ============================================================ */
+.pc {
+  display: block;
+}
+.pc-img {
+  aspect-ratio: 3 / 4;
+  overflow: hidden;
+  position: relative;
+  background: var(--bg-soft);
+}
+.pc-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 1.2s cubic-bezier(.2,.8,.2,1);
+}
+.pc:hover .pc-img img {
+  transform: scale(1.08);
+}
+.pc-img::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to top,
+    rgba(0,0,0,0.25) 0%,
+    transparent 40%,
+    transparent 60%,
+    rgba(0,0,0,0.08) 100%
+  );
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 500ms ease;
+}
+.pc:hover .pc-img::after { opacity: 1; }
+
+/* Corner tags on product */
+.pc-tag {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  font-size: 0.6rem;
+  font-weight: 500;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: #fff;
+  padding: 0.4rem 0.75rem;
+  background: var(--gradient-emerald);
+}
+.pc-tag.gold {
+  left: auto;
+  right: 1rem;
+  background: var(--gradient-gold);
+  color: var(--ink-inv);
+}
+
+/* Add-to-bag on hover */
+.pc-add {
+  position: absolute;
+  bottom: 1rem;
+  right: 1rem;
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.95);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transform: translateY(12px);
+  transition: all 500ms cubic-bezier(.2,.8,.2,1);
+  cursor: pointer;
+  color: var(--ink);
+}
+.pc:hover .pc-add {
+  opacity: 1;
+  transform: translateY(0);
+}
+.pc-add:hover {
+  background: var(--ink);
+  color: var(--ink-inv);
+}
+
+/* Product text — minimal */
+.pc-text {
+  padding-top: 1.25rem;
+}
+.pc-vendor {
+  font-size: 0.65rem;
+  font-weight: 400;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--gold-deep);
+}
+.pc-name {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 1.05rem;
+  line-height: 1.3;
+  margin-top: 0.35rem;
+  transition: color 300ms;
+}
+.pc:hover .pc-name { color: var(--emerald); }
+.pc-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-top: 0.5rem;
+}
+.pc-price {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1.15rem;
+  color: var(--ink);
+}
+.pc-rating {
+  font-size: 0.7rem;
+  color: var(--ink-muted);
+}
+
+/* ============================================================
+   SECTION ATMOSPHERES + BLOCK-PRINT TEXTURE
+   ============================================================ */
+/* Indian block-print motif — tiny diamond grid, whisper-quiet */
+.pattern-block {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='44' height='44' viewBox='0 0 44 44'><path d='M22 8l6 6-6 6-6-6z' fill='none' stroke='%23B8913A' stroke-opacity='0.5' stroke-width='0.7'/><circle cx='22' cy='22' r='1.2' fill='%23B8913A' fill-opacity='0.4'/><path d='M0 22h8M36 22h8M22 0v8M22 36v8' stroke='%230F4A2D' stroke-opacity='0.25' stroke-width='0.6'/></svg>");
+  background-size: 44px 44px;
+}
+.pattern-veil {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.16;
+}
+html.dark .pattern-veil { opacity: 0.1; }
+
+/* Animated gradient-border card */
+@keyframes fc-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+.gborder {
+  position: relative;
+  border-radius: 22px;
+  padding: 1.5px;
+  overflow: hidden;
+  isolation: isolate;
+}
+.gborder::before {
+  content: "";
+  position: absolute;
+  inset: -55%;
+  z-index: -1;
+  background: conic-gradient(
+    from 0deg,
+    #E6CE85 0deg,
+    #7A5A12 70deg,
+    #0F4A2D 140deg,
+    #B8913A 210deg,
+    #F3E5B8 280deg,
+    #E6CE85 360deg
+  );
+  animation: fc-spin 11s linear infinite;
+}
+.gborder:hover::before {
+  animation-duration: 4.5s;
+}
+@media (prefers-reduced-motion: reduce) {
+  .gborder::before { animation: none !important; }
+}
+
+/* Orbit motion for the hero new-arrivals medallion */
+@keyframes fc-orbit {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+@keyframes fc-orbit-rev {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(-360deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fc-orbit-safe { animation: none !important; }
+}
+
+/* Woven canvas weave — gallery wall */
+.canvas-weave {
+  background-image:
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.028) 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.045) 0 1px, transparent 1px 3px);
+  opacity: 0.55;
+}
+
+/* Deep emerald immersion */
+.atmo-emerald {
+  background: linear-gradient(160deg, #072A1A 0%, #0F4A2D 55%, #0A3520 100%);
+  color: #F2EDE2;
+  position: relative;
+}
+.atmo-emerald .pattern-block {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='44' height='44' viewBox='0 0 44 44'><path d='M22 8l6 6-6 6-6-6z' fill='none' stroke='%23E6CE85' stroke-opacity='0.5' stroke-width='0.7'/><circle cx='22' cy='22' r='1.2' fill='%23E6CE85' fill-opacity='0.35'/></svg>");
+}
+
+/* Warm sand */
+.atmo-sand {
+  background: linear-gradient(180deg, #F5EFE4 0%, #EFE6D4 100%);
+}
+html.dark .atmo-sand {
+  background: linear-gradient(180deg, #141C18 0%, #10160F 100%);
+}
+
+/* ============================================================
+   HERO v3 — editorial magazine cover
+   ============================================================ */
+.text-outline-gold {
+  color: transparent;
+  -webkit-text-stroke: 1.5px var(--gold);
+}
+html.dark .text-outline-gold {
+  -webkit-text-stroke: 1.5px var(--gold-2);
+}
+.arch-mask {
+  border-radius: 999px 999px 0 0;
+  overflow: hidden;
+}
+@keyframes spin-slow {
+  to { transform: rotate(360deg); }
+}
+.spin-slow { animation: spin-slow 26s linear infinite; }
+@keyframes kenburns {
+  0% { transform: scale(1) translateY(0); }
+  100% { transform: scale(1.14) translateY(-2%); }
+}
+.kenburns { animation: kenburns 20s ease-in-out infinite alternate; }
+@keyframes float-soft {
+  0%, 100% { transform: translateY(0) rotate(var(--float-rot, 0deg)); }
+  50% { transform: translateY(-14px) rotate(var(--float-rot, 0deg)); }
+}
+.float-soft { animation: float-soft 7s ease-in-out infinite; }
+
+/* ============================================================
+   FILM GRAIN — reusable utility
+   ============================================================ */
+.grain {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.035;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+}
+
+/* ============================================================
+   SECTION RHYTHM — generous vertical spacing
+   ============================================================ */
+.section-xl { padding-block: clamp(4rem, 10vw, 10rem); }
+.section-lg { padding-block: clamp(3rem, 7vw, 7rem); }
+.section-md { padding-block: clamp(2rem, 5vw, 5rem); }
+
+/* ============================================================
+   HORIZONTAL SCROLL (category tiles)
+   ============================================================ */
+.hscroll {
+  display: flex;
+  gap: 1.5rem;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  padding-inline: clamp(1.25rem, 4vw, 4rem);
+  padding-block: 1rem;
+}
+.hscroll::-webkit-scrollbar { display: none; }
+.hscroll-item {
+  scroll-snap-align: start;
+  flex: 0 0 clamp(280px, 45vw, 520px);
+}
