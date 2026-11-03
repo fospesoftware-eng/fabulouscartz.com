@@ -1,0 +1,647 @@
+# Fabulous Cartz API (`/backend`)
+
+Production-shaped backend for the Fabulous Cartz commerce platform: the storefront catalogue, cart and checkout flow, a multi-vendor marketplace (sellers, KYC, commission and payouts), peer-to-peer rentals (bookings, deposits, overdue handling and disputes), and the admin back office.
+
+- **Node 20+**, TypeScript (strict), **Fastify 5**, **Prisma 6**, **zod**
+- **SQLite** for local development; the schema and queries are written to move to **Postgres** with a provider swap and a fresh migration
+- JWT access tokens + rotating refresh tokens, bcrypt password hashing, DB-backed session revocation
+- Money is stored in **integer minor units** (USD cents in the seed) with decimal helpers in the serializers
+- OpenAPI 3 generated from the live route table, Swagger UI at **`/docs`**
+
+---
+
+## Quick start
+
+```bash
+cd backend
+npm install
+
+cp .env.example .env        # defaults are ready for local dev
+
+npx prisma migrate deploy   # or: npm run migrate
+npm run seed                # catalogue + orders + 10 sellers + payouts + P2P rentals
+npm run dev                 # http://127.0.0.1:4000  (Swagger: /docs)
+```
+
+Production-style check:
+
+```bash
+npm run build               # tsc, clean
+npm start                   # runs dist/server.js (run build first)
+npm test                    # resets/seeds test.db, then runs vitest
+```
+
+Health and readiness:
+
+```bash
+curl -s localhost:4000/health
+curl -s localhost:4000/ready     # verifies DB connectivity with SELECT 1
+```
+
+> Port note: the API defaults to **4000** (`PORT` in `.env`). If another process already holds port 4000 on your machine, start with `PORT=4010 npm run dev` — nothing else needs to change.
+>
+> The API binds `HOST=127.0.0.1` by default. Set `HOST=0.0.0.0` to expose it on the LAN/in a container.
+
+### Example requests
+
+```bash
+# Staff login
+curl -s -X POST localhost:4000/api/v1/auth/login \
+  -H 'content-type: application/json' \
+  -d '{"email":"admin@fabulouscartz.com","password":"Admin#2026"}'
+
+# Storefront catalogue
+curl -s 'localhost:4000/api/v1/products?category=handmade-jewelry&sort=price_asc&pageSize=5'
+
+# Guest cart → checkout (mock payment)
+CT=$(curl -s -X POST localhost:4000/api/v1/cart | jq -r .data.cartToken)
+curl -s -X POST localhost:4000/api/v1/cart/items -H "x-cart-token: $CT" \
+  -H 'content-type: application/json' -d '{"variantId":"var_001_1","mode":"buy","quantity":1}'
+curl -s -X POST localhost:4000/api/v1/cart/coupon -H "x-cart-token: $CT" \
+  -H 'content-type: application/json' -d '{"code":"FESTIVE20"}'
+curl -s -X POST localhost:4000/api/v1/checkout -H "x-cart-token: $CT" \
+  -H 'content-type: application/json' -d '{
+    "email":"buyer@example.com",
+    "shippingAddress":{"recipient":"Buyer","line1":"12 Marine Drive","city":"Kochi","state":"Kerala","postalCode":"682001","country":"IN","phone":"+91 9000000000"},
+    "paymentMethod":"mock"}'
+# then POST /api/v1/payments/<paymentId>/confirm
+```
+
+---
+
+## Seeded credentials
+
+`npm run seed` is deterministic (fixed clock `2026-11-03T10:20:00+05:30`), so order dates, ratings and stock are stable across restarts.
+
+| Role | Email | Password |
+| --- | --- | --- |
+| Admin | `admin@fabulouscartz.com` | `Admin#2026` |
+| Manager | `manager@fabulouscartz.com` | `Manager#2026` |
+| Fulfilment | `fulfilment@fabulouscartz.com` | `Fulfil#2026` |
+| Customer (30 of them) | e.g. `ananya.raghavan@example.com`, `diya.menon@example.com`, `meera.pillai@example.com` | `Customer#2026` |
+
+Coupons: `FESTIVE20` (20% off, min $40), `WELCOME10` (10%, min $25), `DANCE15` (15%, dance costumes only), `BRIDAL25`, `FREESHIP`, `JEWEL12`, `DIWALI18` (expired), `KIDS10` (kids wear only).
+
+Seed volume: 6 categories, 11 vendors, **10 marketplace sellers** (6 KYC-approved, 2 pending, 1 rejected, 1 suspended) with 28 KYC documents and 3 onboarding requests, 21 products (19 active, 1 draft, 1 archived) / 51 SKUs — every product is attributed to a seller — 60 orders, 356 reviews, 8 coupons, 3 banners, 3 posts, 18 wishlist rows, 5 low-stock SKUs, **60 payouts** backed by **140 seller ledger entries** (6 monthly periods per seller, mixing paid/pending/failed plus unpaid balances for previews), **25 P2P rental listings** (active, pending-review, draft and suspended), **40 bookings** across 13 statuses (in_use, overdue, returned-pending-inspection, completed and disputed all represented) with US state distribution and 229 booking events, **40 rental deposits**, **49 deposit ledger entries**, **6 inspection reports** and **3 disputes** (open plus one resolved). Rental cities/states are spread across the US (CA, NY, TX, FL, WA, IL, GA, AZ, CO, MA) so the console map renders.
+
+Seed counts drift slightly as you exercise the API.
+
+---
+
+## Architecture
+
+```
+backend/
+├── prisma/
+│   ├── schema.prisma            # 46 models, string “enums”, integer money
+│   ├── migrations/              # init + marketplace_p2p_rentals
+│   └── seed.ts                  # deterministic catalogue, sellers, payouts, rentals
+├── src/
+│   ├── server.ts                # process entry, graceful shutdown
+│   ├── app.ts                   # plugins, hooks, error envelope, route tree
+│   ├── config.ts                # zod-validated env
+│   ├── db.ts                    # single PrismaClient
+│   ├── lib/                     # auth, guards, errors, validate, pagination,
+│   │                            # money, slug, serialize, audit, constants
+│   ├── services/                # typed domain layer (no HTTP concerns)
+│   │   ├── cart.ts  orders.ts  coupons.ts  pricing.ts  inventory.ts
+│   │   ├── payments.ts  payments/providers.ts
+│   │   ├── sellers.ts  rentals.ts
+│   │   ├── analytics.ts  notifications.ts  settings.ts
+│   └── routes/                  # thin HTTP layer: validate → service → reply
+│       ├── auth.ts  catalog.ts  cart.ts  checkout.ts  engagement.ts
+│       ├── sellers.ts  rentals.ts
+│       └── admin/ catalog.ts  operations.ts  system.ts
+│                  sellers.ts  payouts.ts  rentals.ts
+├── tests/                       # vitest + fastify inject integration tests
+├── uploads/                     # local media storage (served at /uploads/)
+└── vitest.config.ts
+```
+
+Layering: routes never touch Prisma directly for domain work; services own transactions and business rules. Admin mutations and auth events call `recordAudit`, storing actor, action, entity, before/after JSON and the request id.
+
+### Conventions
+
+- **Pagination**: `{ data, meta: { page, pageSize, total, totalPages } }`
+- **Errors**:
+
+```json
+{
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Request validation failed",
+    "details": [{ "path": "email", "code": "invalid_string", "message": "Invalid email" }],
+    "requestId": "…"
+  }
+}
+```
+
+- **Request ids**: `x-request-id` accepted, generated when absent, echoed on every response.
+- **Caching**: `@fastify/etag` on public GETs (`etag` + `If-None-Match` → 304).
+- **CORS**: `http://localhost:5173` (storefront) and `http://localhost:5174` (admin), credentials enabled, `x-request-id` / `x-cart-token` exposed.
+- **Guest carts** use an `x-cart-token` header; customers use a bearer token and their cart is resolved automatically. `POST /cart/merge` folds a guest cart into the signed-in cart.
+
+### Auth & RBAC
+
+| Capability | Admin | Manager | Fulfilment | Customer |
+| --- | --- | --- | --- | --- |
+| Catalogue/category/vendor CRUD | ✅ | ✅ | read only | ❌ |
+| Inventory adjustments, thresholds | ✅ | ✅ | ✅ | ❌ |
+| Orders: list/detail, status transitions | ✅ | ✅ | ✅ (status confirm/ship/deliver only) | ❌ |
+| Order refunds | ✅ | ✅ | ❌ | ❌ |
+| Customers, coupons, content, banners | ✅ | ✅ | read only | ❌ |
+| Review moderation | ✅ | ✅ | read only | ❌ |
+| Analytics & CSV | ✅ | ✅ | low stock only | ❌ |
+| Settings, tax/shipping rules | ✅ | ✅ | ❌ | ❌ |
+| Seller onboarding/KYC review, commission overrides | ✅ | ✅ | ❌ | ❌ |
+| Seller payouts / commission ledger | ✅ | ✅ | ❌ (money) | ❌ |
+| Rental listing moderation | ✅ | ✅ | read only | ❌ |
+| Rental bookings, calendar, inspection | ✅ | ✅ | ✅ (dispatch/inspection states) | own bookings |
+| Rental deposits, disputes, overdue sweep, rental analytics | ✅ | ✅ | ❌ (money) | ❌ |
+| Team users, password resets | ✅ (writes) | read only | read only | ❌ |
+| Storefront routes | public / customer | | | |
+
+Access tokens are short-lived (`ACCESS_TOKEN_TTL`, default 15m) and carry a session id. The guards re-check that session in the database on every request, so logout, password change and admin revocation take effect immediately. Refresh tokens rotate on every use; replaying an old one revokes the session.
+
+---
+
+## Data model
+
+46 Prisma models, normalised (no JSON blobs used as the primary store):
+
+- **Identity**: `User` (roles, `isActive`, phone, title), `RefreshSession` (hashed token, rotation chain, revoke reason), `Address`
+- **Catalogue**: `Category` (parent/child, `sortOrder`, `isVisible`), `Vendor`, `Product` (slug, status, buy/rent flags, rent daily/weekly/deposit, MRP), `ProductImage`, `ProductTag`, `ProductAttribute`, `ProductVariant` (unique SKU, per-SKU price, stock, reserved, threshold, rent window)
+- **Inventory**: `StockAdjustment` (immutable ledger: delta, reason, before/after, actor), `StockReservation` (order, variant, quantity, status, rental window)
+- **Commerce**: `Cart`, `CartItem` (buy/rent mode, rental dates), `Order`, `OrderItem` (price **snapshot**), `Payment`, `Refund`, `WebhookEvent` (unique `provider + eventId`), `OrderStatusEvent` (timeline), `Address` (shipping snapshot)
+- **Discounts**: `Coupon` (percent/flat, min spend, windows, total + per-customer caps, category scope, stackable/free-shipping flags), `CouponRedemption`
+- **Engagement**: `Review` (one per customer/product, moderation status), `WishlistItem`
+- **Content/ops**: `Banner`, `ContentPost` (draft → published), `Notification` (outbox), `MediaAsset`, `AuditLog`, `AppSetting`, `TaxRule`, `ShippingRule`
+- **Marketplace**: `Seller` (owner user, storefront identity, KYC state, per-seller commission override, masked payout account, rating/status) — **distinct from `Vendor`**, optional `vendorId` link for legacy attribution — `SellerKycDocument`, `SellerOnboardingRequest`, `SellerLedgerEntry` (per order-line sale/refund/commission rows), `Payout` (period gross/commission/refunds/net, `pending → processing → paid → failed`). `Product.sellerId` is backfilled by the seed for every catalogue row.
+- **P2P rentals**: `RentalListing` (owner user or seller, optional product reference, condition grade, replacement value, daily/weekly/monthly rates, deposit, handover mode, US city/state, availability bounds, status), `RentalBlackout`, `Booking` (money snapshot, state machine, overdue accrual, US state), `BookingEvent` (transition timeline), `BookingNote` (thread notes), `RentalDeposit` (pre-auth hold), `DepositLedgerEntry` (`authorize|capture|release|expire`, unique idempotency keys), `InspectionReport`, `Dispute` (resolution + admin decision).
+
+Money is `Int` minor units everywhere (`priceMinor`, `subtotalMinor`, `totalMinor`). Serializers expose `priceMinor` alongside a decimal `price` object for the UI.
+
+---
+
+## Order lifecycle and inventory
+
+```
+pending ──paid──► paid ──► confirmed ──► shipped ──► delivered ──► refunded
+   │                 │          │            │            │
+   └──cancelled◄─────┴──────────┴────────────┴────────────┘   (refunded allowed from paid onward)
+```
+
+Allowed transitions are declared once in [`src/lib/constants.ts`](src/lib/constants.ts) and enforced in [`src/services/orders.ts`](src/services/orders.ts):
+
+| From | To |
+| --- | --- |
+| `pending` | `paid`, `cancelled` |
+| `paid` | `confirmed`, `refunded` |
+| `confirmed` | `shipped`, `refunded` |
+| `shipped` | `delivered`, `refunded` |
+| `delivered` | `refunded` |
+| `cancelled`, `refunded` | — (terminal) |
+
+Illegal transitions return **409** with `{"error":{"code":"INVALID_TRANSITION", …}}`. `POST /orders/:id/status` also returns `allowedTransitions` so the admin UI can render only valid buttons.
+
+Inventory semantics:
+
+1. **Checkout** validates availability and creates `StockReservation` rows inside the same transaction as the order (stock itself is not decremented yet).
+2. **Payment success** (mock confirm or signed webhook) commits: reserved units are decremented from `stockQuantity` and the reservation is marked committed — idempotently.
+3. **Cancellation** releases reservations without touching stock.
+4. **Refund** restocks committed units through a `StockAdjustment` row (reason `return`/`cancellation`), preserving the ledger.
+5. Rentals check the requested window against overlapping reservations and cloned units; rental deposits are snapshotted on the order item.
+
+---
+
+## Payments
+
+`src/services/payments/providers.ts` defines a `PaymentProvider` interface:
+
+```ts
+interface PaymentProvider {
+  name: string;
+  createIntent(input): Promise<PaymentIntentResult>;
+  verifyWebhook(rawBody: Buffer, signature: string | undefined): boolean;
+  refund(payment, amountMinor, reason?): Promise<{ providerRefundId: string; status: string }>;
+}
+```
+
+- **`mock`** — fully working: instant intents, `POST /api/v1/payments/:paymentId/confirm` settles the order, HMAC-SHA256 webhooks.
+- **`razorpay`, `phonepe`, `upi`, `card`** — adapters are wired into the same interface but throw **503 `PROVIDER_NOT_CONFIGURED`** until credentials are supplied. This is deliberate: no live charge can happen by accident.
+
+Webhooks: `POST /api/v1/webhooks/payments/:provider` reads the **raw** body (captured by a custom JSON content-type parser), verifies `x-webhook-signature` (HMAC-SHA256 for mock; Razorpay/PhonePe adapters use their own header conventions once secrets are set), and records the event in `WebhookEvent` with a unique `(provider, eventId)`. Duplicate deliveries return `{ "received": true, "duplicate": true }` and are not reprocessed. Successful payments settle the order exactly once; failed payments set `paymentStatus = failed` and leave the order `pending`.
+
+### Plugging a real provider
+
+1. Add a class implementing `PaymentProvider` (or fill in the existing stub) in `providers.ts` and register it in `getProvider`.
+2. Add credentials to `.env` / `.env.example` and read them via `config.ts`.
+3. Implement `verifyWebhook` with the provider's canonical signature scheme (Razorpay: `X-Razorpay-Signature` over the raw body with the webhook secret).
+4. Map provider events (`payment.captured`, `payment.failed`, `refund.processed`) onto `processWebhook`'s internal types.
+5. Enable the method in **Settings → Payments** (`PATCH /api/v1/admin/settings/payments`) so checkout accepts it.
+6. Add the provider's public key to the returned `clientPayload` for the storefront SDK.
+
+---
+
+## Multi-vendor marketplace
+
+`Seller` is the marketplace identity — it is deliberately **not** the catalogue `Vendor`. A seller has an owner `User`, a unique store slug, contact/address, KYC state (`pending | approved | rejected | suspended`) with `SellerKycDocument` metadata, a commission rate that overrides the platform default (`marketplace.defaultCommissionBps`, seeded at **1200 bps / 12%**), a masked payout account + verification state, rating, join date and status (`pending | active | suspended | rejected`).
+
+- **Listings**: `Product.sellerId` is populated for every seeded catalogue row by mapping `vendorId → seller`. New admin products inherit the seller mapped to their vendor unless an explicit `sellerId` is supplied. Creating any new product (or activating an existing one) for a suspended/rejected seller returns **409**.
+- **Onboarding**: `POST /sellers/onboarding` accepts a public application; admins review via `GET /admin/sellers/onboarding/requests` and `POST /admin/sellers/onboarding/requests/:id/review` (`approve | reject | request_info`). Approval creates/reuses the owner customer account and an active seller.
+- **Commission ledger**: when an order becomes `paid`, one `SellerLedgerEntry(kind="sale")` is written per order line with `gross = lineTotal − deposit`, `commission = round(gross × sellerBps / 10000)`, `net = gross − commission`. Full refunds write reversing `kind="refund"` entries. The ledger is idempotent on `(orderItemId, kind)`.
+- **Payouts**: `GET /admin/sellers/:id/payout-preview` aggregates unattached pending ledger rows. `POST /admin/payouts` snapshots that period into a `Payout` (`grossMinor`, `commissionMinor`, `refundsMinor`, `netMinor`) and attaches the ledger rows. Status lifecycle: `pending → processing → paid → failed`; `POST /admin/payouts/:id/mark-paid` requires a `reference` and records the audit trail.
+- **Analytics**: `GET /admin/analytics/sellers` returns GMV, commission, refunds, net, order counts, rating and outstanding payout liability per seller; `/top` and `/payout-due` are convenience views.
+
+## Peer-to-peer rentals
+
+A `RentalListing` can be owned by a customer **or** a seller (with an optional `productRef`), carries condition grade, replacement value, daily/weekly/monthly rates, security deposit, handover mode (`ship | pickup | both`) with pickup location, availability bounds, blackouts, late fee per day and status (`draft | pending_review | active | paused | suspended`).
+
+```
+requested → approved → deposit_authorized → dispatched (or handed over) → in_use → return_due
+         → returned → inspection → completed
+side paths: declined, cancelled_by_renter, cancelled_by_owner, overdue, disputed
+```
+
+| From | Allowed to |
+| --- | --- |
+| `requested` | `approved`, `declined`, `cancelled_by_renter` |
+| `approved` | `deposit_authorized`, `cancelled_by_renter`, `cancelled_by_owner` |
+| `deposit_authorized` | `dispatched`, `in_use`, `cancelled_by_owner` |
+| `dispatched` | `in_use`, `overdue` |
+| `in_use` | `return_due`, `overdue`, `returned` |
+| `return_due` | `returned`, `overdue` |
+| `overdue` | `returned` |
+| `returned` | `inspection` |
+| `inspection` | `completed`, `disputed` |
+| `disputed` | `completed` |
+| `declined`, `cancelled_by_*`, `completed` | — terminal |
+
+Transitions are declared once in [`src/lib/constants.ts`](src/lib/constants.ts) and enforced server-side in [`src/services/rentals.ts`](src/services/rentals.ts). Illegal transitions return **409** with `{ allowed: [...] }`; booking responses include `allowedTransitions`. **Fulfilment** may move only operational targets (`dispatched`, `in_use`, `return_due`, `returned`, `inspection`, `overdue`); money-bearing targets (`approved`, `deposit_authorized`, `completed`, `disputed`, cancellations) are **403** for Fulfilment.
+
+- **Availability is atomic.** Booking creation runs under a per-listing in-process lock and a transaction that re-checks blocking bookings and blackouts; overlapping dates return **409**. Blocking statuses are all non-terminal states. The calendar endpoints (`GET /rentals/:id/calendar`, `GET /admin/rentals/calendar`) return bookings + blackouts for a window.
+- **Never touches stock.** P2P rentals reserve calendar dates, not inventory; no `ProductVariant.stockQuantity` is changed.
+- **Pricing.** Complete 30-day blocks bill at the monthly rate, complete 7-day blocks at the weekly rate, and remaining days at the daily rate (fallbacks are 30× / 7× daily). `rentalFee = quote`, `platformFee = 10%` (`marketplace.rentalPlatformFeeBps`), `ownerPayout = rentalFee − platformFee`, deposit is snapshotted separately.
+- **Deposits.** `RentalDeposit` starts `pending`, becomes `authorized` on the `deposit_authorized` transition (ledger `authorize` row), may be **partially captured** with a reason (`damage_claim`, `late_fee_*`), then `released` or `expired`. Capture can never exceed the authorized amount (**409**); release is idempotent via ledger idempotency keys and repeated calls return the same state. Completing a booking releases the remaining hold.
+- **Overdue.** `POST /admin/rentals/overdue/sweep` flags bookings past `endDate + graceDays` (default 2), transitions them to `overdue`, accrues `overdueDays × lateFeePerDayMinor` and logs an event. `GET /admin/rentals/overdue` is the admin queue.
+- **Inspection & disputes.** Fulfilment can record a return condition report with photo metadata and a damage claim. A `Dispute` captures the claim and admin resolution (`renter_pays | owner_pays | split | refunded`); the decision captures/releases the deposit and completes the booking. `GET /admin/rentals/disputes` lists open cases.
+- **Notes.** `GET|POST /rentals/bookings/:id/notes` provides lightweight booking-thread notes (participants or staff only).
+
+Deliberately stubbed: real card pre-authorization/capture (the ledger is authoritative), e-signature, and third-party KYC verification. The state machines and money rules are real; no external provider is called.
+
+---
+
+## Analytics
+
+All figures are computed from real orders (`paid`, `confirmed`, `shipped`, `delivered`) with a `from`/`to` date range (default: last 12 months):
+
+- `GET /admin/analytics/summary` — gross/net revenue, refunds, tax, discounts, orders by status, AOV, unique customers, cart → order conversion
+- `GET /admin/analytics/revenue-series?interval=day|week|month`
+- `GET /admin/analytics/funnel` — carts created, carts converted, conversion rate
+- `GET /admin/analytics/category-mix`, `/top-products`, `/low-stock`
+- `GET /admin/analytics/export.csv?dataset=orders|products|low-stock|customers` — streamed CSV with proper headers
+- `GET /admin/analytics/sellers`, `/sellers/top`, `/sellers/payout-due` — marketplace GMV, commission, refunds, net, order counts, ratings and payout liability
+- `GET /admin/analytics/rentals`, `/rentals/states` — rental GMV, platform fees, owner payouts, deposit ledger, overdue/dispute counts and booking distribution by US state (feeds the console map)
+
+## Notifications
+
+Mutations that need a message write to the `Notification` outbox (`email` / `sms` channel, recipient, template, payload, status). The `mock` driver logs and marks rows `sent`; `dispatchPending()` is exposed at `POST /admin/notifications/dispatch` and is safe to call repeatedly. Swap in SMTP/SMS by implementing the driver in `src/services/notifications.ts`.
+
+## Media
+
+`POST /api/v1/admin/media` accepts `multipart/form-data` (`file` field), validates MIME type (jpeg/png/webp/gif) and size (`MAX_UPLOAD_BYTES`, default 5 MB), writes to `UPLOAD_DIR` under a date-partitioned path, records a `MediaAsset` row and returns the public URL served by `@fastify/static` at `/uploads/*`. Delete removes the row and the file.
+
+---
+
+## Endpoint reference
+
+Base path `/api/v1`. `public` = no token, `customer` = bearer customer, `staff` = Admin/Manager (or as noted), `admin` = Admin only.
+
+### Auth
+
+| Method | Path | Access |
+| --- | --- | --- |
+| POST | `/auth/register` | public |
+| POST | `/auth/login` | public |
+| POST | `/auth/refresh` | public (refresh token in body) |
+| POST | `/auth/logout` | authenticated |
+| GET | `/auth/me` | authenticated |
+| PATCH | `/auth/me` | authenticated |
+| POST | `/auth/password` | authenticated |
+| GET | `/auth/sessions` | authenticated |
+| DELETE | `/auth/sessions/:id` | authenticated |
+
+### Storefront — catalogue & content
+
+| Method | Path | Access |
+| --- | --- | --- |
+| GET | `/products` | public — `q, category, vendor, mode, minPrice, maxPrice, tags, sort, page, pageSize` |
+| GET | `/products/:slug` | public |
+| GET | `/products/:slug/availability` | public |
+| GET | `/products/:slug/reviews` | public |
+| GET | `/search` | public — requires `q` |
+| GET | `/categories` | public |
+| GET | `/categories/:slug` | public |
+| GET | `/vendors` | public |
+| GET | `/vendors/:slug` | public |
+| GET | `/banners` | public — `placement` |
+| GET | `/posts` | public (published only) |
+| GET | `/posts/:slug` | public |
+| GET | `/settings/store` | public (store profile, payment toggles) |
+
+### Storefront — cart, checkout, payments, engagement
+
+| Method | Path | Access |
+| --- | --- | --- |
+| POST | `/cart` | public / customer |
+| GET | `/cart` | public / customer |
+| POST | `/cart/items` | public / customer |
+| PATCH | `/cart/items/:itemId` | public / customer |
+| DELETE | `/cart/items/:itemId` | public / customer |
+| POST | `/cart/coupon` | public / customer |
+| DELETE | `/cart/coupon` | public / customer |
+| POST | `/cart/merge` | customer |
+| POST | `/coupons/validate` | public / customer |
+| POST | `/checkout` | public / customer |
+| GET | `/orders` | customer |
+| GET | `/orders/:orderNumber` | customer or matching `email` |
+| GET | `/orders/:orderNumber/status` | customer or matching `email` |
+| GET | `/orders/:orderNumber/payments` | customer or matching `email` |
+| GET | `/payments/providers` | public |
+| POST | `/payments/intents` | customer or matching `email` |
+| POST | `/payments/:paymentId/confirm` | public (mock driver only) |
+| POST | `/webhooks/payments/:provider` | provider signature |
+| GET | `/wishlist` | customer |
+| POST | `/wishlist` | customer |
+| DELETE | `/wishlist/:productId` | customer |
+| POST | `/reviews` | public (guest needs `authorName`) / customer |
+
+### Storefront — marketplace sellers & P2P rentals
+
+| Method | Path | Access |
+| --- | --- | --- |
+| GET | `/sellers` | public — active/`kycStatus=approved`, `q`, `state`, pagination |
+| GET | `/sellers/:slug` | public |
+| GET | `/sellers/:slug/products` | public |
+| GET | `/sellers/:slug/rentals` | public |
+| POST | `/sellers/onboarding` | public (application) |
+| GET | `/rentals` | public — `q, category, city, state, condition, handoverMode, minPrice, maxPrice, availableFrom, availableTo, sort` |
+| GET | `/rentals/search` | public (alias) |
+| GET | `/rentals/:id` | public (active listings only; `id` or slug) |
+| GET | `/rentals/:id/calendar?from&to` | public |
+| POST | `/rentals/:id/bookings` | customer — reserves the date range atomically |
+| GET | `/rentals/bookings` | customer/staff — own renter/owner bookings (`role=renter|owner|any`) |
+| GET | `/rentals/bookings/:id` | participant or staff |
+| POST | `/rentals/bookings/:id/cancel` | participant |
+| POST | `/rentals/bookings/:id/owner-action` | owner/staff — `approve | decline` |
+| POST | `/rentals/bookings/:id/return` | participant |
+| GET / POST | `/rentals/bookings/:id/notes` | participant or staff |
+| POST | `/rentals/bookings/:id/dispute` | participant |
+
+### Admin — catalogue
+
+| Method | Path | Access |
+| --- | --- | --- |
+| GET | `/admin/products` | staff |
+| POST | `/admin/products` | Admin/Manager |
+| GET | `/admin/products/:id` | staff |
+| PATCH | `/admin/products/:id` | Admin/Manager |
+| DELETE | `/admin/products/:id` | Admin/Manager (archives) |
+| POST | `/admin/products/:id/variants` | Admin/Manager |
+| PATCH | `/admin/variants/:id` | Admin/Manager |
+| DELETE | `/admin/variants/:id` | Admin/Manager |
+| GET | `/admin/categories` | staff |
+| POST | `/admin/categories` | Admin/Manager |
+| PATCH | `/admin/categories/:id` | Admin/Manager |
+| DELETE | `/admin/categories/:id` | Admin |
+| GET | `/admin/vendors` | staff |
+| POST | `/admin/vendors` | Admin/Manager |
+| PATCH | `/admin/vendors/:id` | Admin/Manager |
+| DELETE | `/admin/vendors/:id` | Admin |
+
+### Admin — operations
+
+| Method | Path | Access |
+| --- | --- | --- |
+| GET | `/admin/orders` | staff |
+| GET | `/admin/orders/:id` | staff |
+| PATCH | `/admin/orders/:id/status` | staff (state machine) |
+| POST | `/admin/orders/:id/refunds` | Admin/Manager |
+| GET | `/admin/customers` | staff |
+| GET | `/admin/customers/:id` | staff |
+| PATCH | `/admin/customers/:id` | Admin/Manager |
+| GET | `/admin/inventory` | staff |
+| GET | `/admin/inventory/adjustments` | staff |
+| POST | `/admin/inventory/adjustments` | staff |
+| GET | `/admin/inventory/reservations` | staff |
+| PATCH | `/admin/inventory/variants/:id/threshold` | staff |
+| GET | `/admin/coupons` | staff |
+| POST | `/admin/coupons` | Admin/Manager |
+| PATCH | `/admin/coupons/:id` | Admin/Manager |
+| DELETE | `/admin/coupons/:id` | Admin/Manager |
+| GET | `/admin/coupons/:id/redemptions` | staff |
+| GET | `/admin/reviews` | staff |
+| PATCH | `/admin/reviews/:id` | Admin/Manager |
+| GET | `/admin/banners` | staff |
+| POST | `/admin/banners` | Admin/Manager |
+| PATCH | `/admin/banners/:id` | Admin/Manager |
+| DELETE | `/admin/banners/:id` | Admin/Manager |
+| GET | `/admin/posts` | staff |
+| POST | `/admin/posts` | Admin/Manager |
+| PATCH | `/admin/posts/:id` | Admin/Manager |
+| DELETE | `/admin/posts/:id` | Admin/Manager |
+| POST | `/admin/posts/:id/publish` | Admin/Manager |
+
+### Admin — analytics, system
+
+| Method | Path | Access |
+| --- | --- | --- |
+| GET | `/admin/analytics/summary` | Admin/Manager |
+| GET | `/admin/analytics/revenue-series` | Admin/Manager |
+| GET | `/admin/analytics/funnel` | Admin/Manager |
+| GET | `/admin/analytics/category-mix` | Admin/Manager |
+| GET | `/admin/analytics/top-products` | Admin/Manager |
+| GET | `/admin/analytics/low-stock` | staff |
+| GET | `/admin/analytics/export.csv` | Admin/Manager |
+| GET | `/admin/settings` | Admin/Manager |
+| PATCH | `/admin/settings/:section` | Admin/Manager |
+| GET | `/admin/users` | staff |
+| POST | `/admin/users` | Admin |
+| PATCH | `/admin/users/:id` | Admin |
+| POST | `/admin/users/:id/reset-password` | Admin |
+| GET | `/admin/audit` | Admin/Manager |
+| GET | `/admin/notifications` | staff |
+| POST | `/admin/notifications/dispatch` | staff |
+| GET | `/admin/media` | staff |
+| POST | `/admin/media` | Admin/Manager |
+| DELETE | `/admin/media/:id` | Admin/Manager |
+
+### Admin — marketplace sellers & payouts
+
+| Method | Path | Access |
+| --- | --- | --- |
+| GET | `/admin/sellers` | Admin/Manager — `q, status, kycStatus, state` |
+| GET | `/admin/sellers/:id` | Admin/Manager — KYC docs, ledger, payouts, payout preview |
+| POST | `/admin/sellers` | Admin/Manager |
+| PATCH | `/admin/sellers/:id` | Admin/Manager |
+| POST | `/admin/sellers/:id/review` | Admin/Manager — `approve | reject | suspend | reinstate` |
+| PATCH | `/admin/sellers/:id/commission` | Admin/Manager — bps override (`null` clears) |
+| POST | `/admin/sellers/:id/kyc-documents` | Admin/Manager |
+| POST | `/admin/sellers/kyc-documents/:documentId/review` | Admin/Manager |
+| GET | `/admin/sellers/onboarding/requests` | Admin/Manager |
+| POST | `/admin/sellers/onboarding/requests/:id/review` | Admin/Manager |
+| GET | `/admin/sellers/:id/payout-preview` | Admin/Manager |
+| GET | `/admin/payouts` | Admin/Manager — `sellerId, status, from, to` |
+| GET | `/admin/payouts/:id` | Admin/Manager |
+| POST | `/admin/payouts` | Admin/Manager — generate from unpaid ledger |
+| POST | `/admin/payouts/:id/mark-paid` | Admin/Manager — requires `reference` |
+| POST | `/admin/payouts/:id/status` | Admin/Manager — `processing | paid | failed` |
+| GET | `/admin/payouts/preview/:sellerId` | Admin/Manager (alias) |
+| GET | `/admin/analytics/sellers` | Admin/Manager |
+| GET | `/admin/analytics/sellers/top` | Admin/Manager |
+| GET | `/admin/analytics/sellers/payout-due` | Admin/Manager |
+
+### Admin — P2P rentals
+
+| Method | Path | Access |
+| --- | --- | --- |
+| GET | `/admin/rentals/listings` | Admin/Manager — moderation queue |
+| GET | `/admin/rentals/listings/:id` | Admin/Manager |
+| PATCH | `/admin/rentals/listings/:id` | Admin/Manager — status/price/content moderation |
+| GET | `/admin/rentals/listings/:id/calendar?from&to` | staff |
+| GET | `/admin/rentals/bookings` | staff — `status, state, listingId, renterUserId, ownerUserId, overdue, from, to` |
+| GET | `/admin/rentals/bookings/:id` | staff |
+| POST | `/admin/rentals/bookings/:id/transition` | staff — Fulfilment limited to dispatch/inspection states |
+| GET | `/admin/rentals/calendar?from&to&state` | staff — platform-wide |
+| POST | `/admin/rentals/bookings/:id/inspection` | staff — Fulfilment allowed |
+| GET | `/admin/rentals/deposits` | Admin/Manager (money) |
+| POST | `/admin/rentals/deposits/:id/capture` | Admin/Manager (money) — partial capture with reason |
+| POST | `/admin/rentals/deposits/:id/release` | Admin/Manager (money) — idempotent |
+| GET | `/admin/rentals/overdue` | staff |
+| POST | `/admin/rentals/overdue/sweep` | Admin/Manager (late-fee money) |
+| GET | `/admin/rentals/disputes` | Admin/Manager |
+| POST | `/admin/rentals/disputes/:id/resolve` | Admin/Manager — decision + deposit settlement |
+| GET | `/admin/analytics/rentals` | Admin/Manager |
+| GET | `/admin/analytics/rentals/states` | Admin/Manager |
+
+### Service
+
+| Method | Path |
+| --- | --- |
+| GET | `/health` (outside `/api/v1`) |
+| GET | `/ready` (outside `/api/v1`) |
+| GET | `/docs` — Swagger UI |
+| GET | `/docs/json` — OpenAPI 3 document |
+| GET | `/uploads/*` — static media |
+
+Settings sections accepted by `PATCH /admin/settings/:section`: `store`, `payments`, `shipping`, `tax`, `notifications`, `marketplace` (default commission bps, rental platform fee bps, payout cycle).
+
+---
+
+## Environment variables
+
+| Variable | Default | Notes |
+| --- | --- | --- |
+| `NODE_ENV` | `development` | `test` disables request logging |
+| `PORT` / `HOST` | `4000` / `127.0.0.1` | |
+| `DATABASE_URL` | `file:./dev.db` | relative to `prisma/` |
+| `JWT_SECRET` / `REFRESH_SECRET` | dev values | **change in production** (`openssl rand -hex 32`) |
+| `ACCESS_TOKEN_TTL` | `15m` | |
+| `REFRESH_TOKEN_TTL_DAYS` | `30` | |
+| `CORS_ORIGINS` | `http://localhost:5173,http://localhost:5174` | comma-separated |
+| `PUBLIC_BASE_URL` | `http://localhost:4000` | used for absolute media URLs |
+| `UPLOAD_DIR` / `MAX_UPLOAD_BYTES` | `./uploads` / `5242880` | |
+| `PAYMENT_DEFAULT_PROVIDER` | `mock` | |
+| `MOCK_WEBHOOK_SECRET` | `mock-webhook-secret` | HMAC key for mock webhooks |
+| `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` / `RAZORPAY_WEBHOOK_SECRET` | empty | enables the Razorpay adapter |
+| `PHONEPE_MERCHANT_ID` / `PHONEPE_SALT_KEY` / `PHONEPE_WEBHOOK_SECRET` | empty | enables PhonePe |
+| `NOTIFICATION_DRIVER` | `mock` | `mock` logs; SMTP is an adapter stub |
+
+All variables are validated by zod at startup (`src/config.ts`); invalid values fail fast.
+
+---
+
+## Testing
+
+```bash
+npm test
+```
+
+- `test:db` resets `prisma/test.db` (`db push --force-reset`) and seeds it
+- `vitest` sets `NODE_ENV=test` and `DATABASE_URL=file:./test.db` (see `vitest.config.ts`), so the dev database is never touched
+- Tests use `app.inject()` — no port, no network
+
+Coverage:
+
+| File | What it proves |
+| --- | --- |
+| `tests/auth.test.ts` | login, wrong password, register/duplicate/zod errors, refresh rotation + reuse rejection, logout revocation, password change invalidates sessions, anonymous 401 |
+| `tests/rbac.test.ts` | unauth 401, customer 403 on admin, fulfilment blocked from catalogue writes but allowed order/inventory reads, manager allowed, revoked-session 401 |
+| `tests/catalog.test.ts` | 19 active products listed with pagination meta, category/vendor/mode/price filters, sorting, search validation, banners/posts, draft→active→archived visibility, stock adjustments + ledger, zod error envelope |
+| `tests/checkout.test.ts` | guest cart CRUD, coupon validation (valid/unknown/min-spend/category), apply/remove coupon totals, reservation at checkout, decrement on payment, confirm idempotency, illegal transitions 409, cancel releases reservation, provider stub 503, empty-cart 400 |
+| `tests/webhook.test.ts` | invalid signature 401, signed success settles once, duplicate eventId is not reprocessed, failed payment does not settle |
+| `tests/marketplace.test.ts` | overlapping rental booking rejected 409 (adjacent start allowed), illegal booking transition 409 with `allowedTransitions`, deposit capture above authorized 409, deposit release idempotency (single release ledger row), per-seller commission + payout preview/generate/mark-paid math, Fulfilment 403 on payout money endpoints but allowed dispatch/inspection transitions, suspended seller blocked from publishing new listings, public sellers exclude suspended/rejected |
+
+Result: **6 files / 39 tests passing** (32 pre-existing + 7 marketplace/rental).
+
+---
+
+## SQLite → Postgres
+
+The schema deliberately avoids SQLite-only features: no Prisma `enum` types (string columns + zod), no `Json` columns used as the source of truth, no raw SQL, and all money in `Int`.
+
+1. `prisma/schema.prisma`:
+
+```prisma
+datasource db {
+  provider = "postgresql"   // was "sqlite"
+  url      = env("DATABASE_URL")
+}
+```
+
+2. Set `DATABASE_URL=postgresql://user:pass@host:5432/fabulouscartz?schema=public`.
+3. Generate a Postgres baseline migration (`npx prisma migrate dev --name postgres_init`) and deploy it. Do **not** replay the SQLite migration folder against Postgres.
+4. Optional hardening: convert `status`/`role` text columns to native enums, and add GIN indexes for search (`title`/`description` trigram).
+5. For higher write throughput, replace `prisma db push` in `test:db` with a Postgres test database (or Testcontainers).
+
+No application code changes are required; the services only use Prisma's typed API.
+
+---
+
+## Known limitations
+
+- **Payments are sandbox-only.** `mock` is fully functional; Razorpay/PhonePe/UPI/Card adapters verify configuration but do not call live APIs. No 3-D Secure, captures, partial captures or settlement reconciliation.
+- **Refunds** create `Refund` rows and mark the payment/order, but money movement for live providers must be implemented in `PaymentProvider.refund`.
+- **Search** is a `contains` query (case-insensitive on SQLite) — adequate for 21 products, not for a large catalogue. Postgres should use `pg_trgm` + GIN, or move to Meilisearch/Typesense.
+- **Email/SMS** are outbox + mock driver. No template rendering engine or retry/backoff worker is scheduled automatically (dispatch is manual).
+- **Carts** never expire automatically (no TTL job); add a scheduled cleanup for production.
+- **Analytics** is computed on read. For large order volumes, materialise daily aggregates.
+- **Media** is on local disk; production needs S3/GCS and an image pipeline.
+- **Rental availability** is enforced by an overlap check inside an interactive transaction plus an in-process per-listing promise-chain lock. This is safe for a single API instance; a horizontally scaled deployment needs a Postgres advisory lock or a `daterange` exclusion constraint (and a rental-calendar index) instead.
+- **Deposits are pre-authorization stubs.** `deposit_authorized`, partial capture and release are recorded in the deposit ledger with the reason, but no real card hold/capture is sent to a PSP — wire this into `PaymentProvider` before going live.
+- **KYC is self-declared metadata.** `SellerKycDocument` stores document type/number/reference and review state; there is no identity provider (Persona/Onfido/Stripe Identity) call, no OCR or liveness check.
+- **Seller agreements are not e-signed.** `SellerOnboardingRequest` records acceptance flags/timestamps only; no DocuSign/e-sign envelope is produced.
+- **Payouts do not move money.** `Payout` transitions (`pending → processing → paid → failed`) and the mark-paid reference are bookkeeping; disbursement via Stripe Connect/PayPal/bank rails is out of scope.
+- **Rental messaging is booking notes only** (`BookingNote`), not a real-time chat channel; notifications use the mock outbox like the rest of the app.
+- **Overdue handling** is a manual `POST /admin/rentals/overdue/sweep` (grace period + per-day late fee + admin flag); schedule it with a worker/cron in production.
+- **Rate limiting** is not enabled (`@fastify/rate-limit` is the drop-in next step) — required before public launch.
+- **Audit coverage** is complete for admin mutations, auth and payments; high-volume customer cart/wishlist churn is intentionally not written to `AuditLog`.
+- **Refresh tokens** are stored hashed but sessions are not bound to device/IP metadata.
+- **Test DB** is SQLite and recreated per run; it does not prove Postgres behaviour.
+- `tsc` excludes `tests/`, so tests are type-checked by Vitest's transformer, not by `npm run build`.
+
+---
+
+## Useful scripts
+
+| Script | Purpose |
+| --- | --- |
+| `npm run dev` | `tsx watch src/server.ts` |
+| `npm run build` | `tsc -p tsconfig.json` → `dist/` |
+| `npm start` | `node dist/server.js` |
+| `npm run migrate` | `prisma migrate dev` |
+| `npm run seed` | re-seed the configured database (destructive: clears domain tables) |
+| `npm run test:db` | reset + seed `test.db` |
+| `npm test` | `test:db` + vitest |
+
+`SIGINT`/`SIGTERM` trigger `app.close()`, which stops accepting requests, drains in-flight work and disconnects Prisma.
