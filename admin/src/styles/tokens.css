@@ -1,0 +1,213 @@
+/* Fabulous Cartz Operations Console — design tokens
+   Values mirrored from the storefront brand sheet, tuned for an admin surface. */
+
+/* ---------------------------------------------------------------------------
+   Type system
+   Workhorse + headings: Inter (self-hosted variable woff2, weights 400/500/600/700).
+   Display accent: Fraunces, reserved for the single hero figure on the dashboard.
+   Brand accent: Playfair Display italic 500 — the exact face the deployed
+   storefront header uses for its "Fabulous" wordmark. Logo fidelity only.
+
+   Scale (px)        role                            line-height
+   --type-2xs  10    micro labels / table eyebrows   --leading-tight 1.12
+   --type-xs   11    chips, meta, small caps         --leading-snug  1.3
+   --type-sm   12    buttons, captions                --leading-snug  1.3
+   --type-md   13    body copy, table cells           --leading-normal 1.55
+   --type-lg   16    panel titles, section heads      --leading-snug  1.3
+   --type-xl   20    drawer titles                   --leading-snug  1.25
+   --type-2xl  26    page titles                     --leading-tight 1.1
+   --type-3xl  34    hero / lead KPI figure          --leading-tight 1
+--------------------------------------------------------------------------- */
+@font-face {
+  font-family: "Inter";
+  src: url("/fonts/inter-var-latin.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Fraunces";
+  src: url("/fonts/fraunces-var-latin.woff2") format("woff2");
+  font-weight: 400 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Playfair Display";
+  src: url("/fonts/playfair-italic-500-latin.woff2") format("woff2");
+  font-weight: 500;
+  font-style: italic;
+  font-display: swap;
+}
+
+:root {
+  color-scheme: light;
+
+  --bg: #f4eee5;
+  --bg-deep: #ece3d4;
+  --surface: #fffcf7;
+  --surface-2: #faf4ea;
+  --surface-3: #f2e9da;
+  --surface-glass: rgba(255, 252, 247, 0.72);
+  --ink: #17140f;
+  --ink-2: #51493d;
+  --ink-3: #897e6e;
+  --ink-4: #a79b89;
+  --ink-inv: #fbf6ec;
+
+  --line: rgba(23, 20, 15, 0.09);
+  --line-strong: rgba(23, 20, 15, 0.16);
+  --line-faint: rgba(23, 20, 15, 0.05);
+
+  --emerald: #0b3b24;
+  --emerald-2: #1b6b43;
+  --emerald-3: #2e8b57;
+  --mint: #8dc79b;
+  --gold-deep: #6a4f1b;
+  --gold: #b8913a;
+  --gold-2: #d4b156;
+  --gold-soft: #f3e5b8;
+  --rose: #7a3f2b;
+  --rose-2: #b56a4d;
+  --rose-soft: #e7b7a1;
+
+  --positive: #1d7a4c;
+  --positive-bg: rgba(29, 122, 76, 0.1);
+  --danger: #9c2f2f;
+  --danger-bg: rgba(156, 47, 47, 0.09);
+  --warning: #9a6512;
+  --warning-bg: rgba(154, 101, 18, 0.1);
+  --info: #2f5d7c;
+  --info-bg: rgba(47, 93, 124, 0.1);
+
+  --grad-emerald: linear-gradient(135deg, #08301c 0%, #0f4a2d 52%, #1b6b43 100%);
+  --grad-gold: linear-gradient(135deg, #6a4f1b 0%, #b8913a 52%, #e6ce85 100%);
+  --grad-rose: linear-gradient(135deg, #5d2f22 0%, #7a3f2b 50%, #b56a4d 100%);
+  --grad-deck:
+    radial-gradient(120% 140% at 12% 0%, rgba(46, 139, 87, 0.42) 0%, transparent 58%),
+    radial-gradient(90% 120% at 88% 10%, rgba(212, 177, 86, 0.26) 0%, transparent 55%),
+    linear-gradient(135deg, #072a1a 0%, #0c3a24 46%, #123f28 76%, #1a4a2f 100%);
+  --grad-surface: linear-gradient(160deg, #fffdf9 0%, #fbf5ea 100%);
+  --grad-page: radial-gradient(80% 60% at 18% 0%, rgba(184, 145, 58, 0.10) 0%, transparent 62%),
+    radial-gradient(70% 55% at 92% 8%, rgba(46, 139, 87, 0.10) 0%, transparent 62%),
+    linear-gradient(180deg, #f6f0e7 0%, #f2eadd 100%);
+
+  --shadow-sm: 0 1px 2px rgba(60, 44, 20, 0.05), 0 1px 1px rgba(60, 44, 20, 0.03);
+  --shadow-md: 0 12px 30px -18px rgba(60, 44, 20, 0.28), 0 2px 8px rgba(60, 44, 20, 0.05);
+  --shadow-lg: 0 30px 70px -34px rgba(42, 31, 14, 0.4), 0 8px 24px -14px rgba(42, 31, 14, 0.18);
+  --shadow-gold: 0 18px 40px -26px rgba(184, 145, 58, 0.55);
+
+  --radius-xs: 8px;
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
+
+  --font-display: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-accent: "Fraunces", Georgia, serif;
+  --font-brand: "Playfair Display", Georgia, serif;
+  --font-mono: "SF Mono", ui-monospace, Menlo, monospace;
+
+  --type-2xs: 10px;
+  --type-xs: 11px;
+  --type-sm: 12px;
+  --type-md: 13px;
+  --type-lg: 16px;
+  --type-xl: 20px;
+  --type-2xl: 26px;
+  --type-3xl: 34px;
+  --leading-tight: 1.12;
+  --leading-snug: 1.3;
+  --leading-normal: 1.55;
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+
+  --header-h: 66px;
+  --sidebar-w: 252px;
+  --pad-x: clamp(16px, 2.2vw, 30px);
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  --chart-grid: rgba(23, 20, 15, 0.08);
+  --chart-area: rgba(27, 107, 67, 0.16);
+
+  --map-empty: #e6dfd2;
+  --map-l1: #cfe4cf;
+  --map-l2: #8fc2a0;
+  --map-l3: #4d9a72;
+  --map-l4: #b08a2e;
+  --map-stroke: rgba(23, 20, 15, 0.2);
+  --gold-hairline: rgba(184, 145, 58, 0.34);
+  --glass-edge: rgba(255, 255, 255, 0.72);
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --bg: #07110c;
+  --bg-deep: #050c09;
+  --surface: #0e1c15;
+  --surface-2: #12241b;
+  --surface-3: #172b20;
+  --surface-glass: rgba(14, 28, 21, 0.74);
+  --ink: #f2ecdf;
+  --ink-2: #c4bcab;
+  --ink-3: #928a7a;
+  --ink-4: #6f685c;
+  --ink-inv: #08120d;
+
+  --line: rgba(242, 236, 223, 0.1);
+  --line-strong: rgba(242, 236, 223, 0.18);
+  --line-faint: rgba(242, 236, 223, 0.055);
+
+  --emerald: #8dc79b;
+  --emerald-2: #4ea766;
+  --emerald-3: #2e8b57;
+  --mint: #b7e0c0;
+  --gold-deep: #d4b156;
+  --gold: #e6ce85;
+  --gold-2: #f3e5b8;
+  --gold-soft: #4b3c1c;
+  --rose: #e7b7a1;
+  --rose-2: #d18a6e;
+  --rose-soft: #4a2a21;
+
+  --positive: #6fd39b;
+  --positive-bg: rgba(111, 211, 155, 0.12);
+  --danger: #f0a1a1;
+  --danger-bg: rgba(240, 161, 161, 0.12);
+  --warning: #e8c274;
+  --warning-bg: rgba(232, 194, 116, 0.12);
+  --info: #9cc7e4;
+  --info-bg: rgba(156, 199, 228, 0.12);
+
+  --grad-deck:
+    radial-gradient(120% 140% at 10% 0%, rgba(78, 167, 102, 0.32) 0%, transparent 58%),
+    radial-gradient(90% 120% at 90% 8%, rgba(230, 206, 133, 0.16) 0%, transparent 52%),
+    linear-gradient(135deg, #03130c 0%, #071f15 44%, #0b2b1c 76%, #0e3523 100%);
+  --grad-surface: linear-gradient(160deg, #12231a 0%, #0e1b14 100%);
+  --grad-page: radial-gradient(80% 60% at 18% 0%, rgba(230, 206, 133, 0.07) 0%, transparent 62%),
+    radial-gradient(70% 55% at 92% 6%, rgba(46, 139, 87, 0.10) 0%, transparent 60%),
+    linear-gradient(180deg, #08130d 0%, #07110c 100%);
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 18px 38px -22px rgba(0, 0, 0, 0.7), 0 2px 8px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 40px 90px -40px rgba(0, 0, 0, 0.85), 0 10px 30px -18px rgba(0, 0, 0, 0.6);
+  --shadow-gold: 0 18px 44px -28px rgba(230, 206, 133, 0.4);
+
+  --chart-grid: rgba(242, 236, 223, 0.09);
+  --chart-area: rgba(78, 167, 102, 0.18);
+
+  --map-empty: #0c1f16;
+  --map-l1: #143826;
+  --map-l2: #1b5438;
+  --map-l3: #2c8052;
+  --map-l4: #b8913a;
+  --map-stroke: rgba(242, 236, 223, 0.17);
+  --gold-hairline: rgba(230, 206, 133, 0.3);
+  --glass-edge: rgba(242, 236, 223, 0.08);
+}

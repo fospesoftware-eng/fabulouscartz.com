@@ -1,0 +1,304 @@
+/* ---------- Sparklines ---------- */
+.spark {
+  display: block;
+  width: 100%;
+  --spark: var(--emerald-3);
+  overflow: visible;
+}
+
+.spark-gold { --spark: var(--gold); }
+.spark-rose { --spark: var(--rose-2); }
+.spark-emerald { --spark: var(--emerald-3); }
+
+/* ---------- Area chart ---------- */
+.area-chart {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+}
+
+.area-chart svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  overflow: visible;
+}
+
+.chart-axis {
+  font-family: var(--font-sans);
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  fill: var(--ink-3);
+}
+
+.chart-tooltip {
+  position: absolute;
+  transform: translate(-50%, -100%);
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: 9px;
+  box-shadow: var(--shadow-md);
+  padding: 7px 9px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  pointer-events: none;
+  min-width: 92px;
+  z-index: 4;
+}
+
+.chart-tooltip-date {
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.chart-tooltip strong {
+  font-size: 12.5px;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.chart-tooltip small {
+  font-size: 9.5px;
+  color: var(--ink-3);
+}
+
+/* ---------- Donut ---------- */
+.donut-wrap {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.donut {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.donut svg {
+  width: 100%;
+  height: 100%;
+}
+
+.donut-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  pointer-events: none;
+}
+
+.donut-center strong {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+.donut-center span {
+  font-size: 8.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.donut-legend {
+  flex: 1;
+  min-width: 140px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.donut-legend li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 10.5px;
+  color: var(--ink-2);
+}
+
+.donut-legend i {
+  width: 8px;
+  height: 8px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.donut-legend span {
+  flex: 1;
+  min-width: 0;
+}
+
+.donut-legend b {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Category bars ---------- */
+.cat-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+
+.cat-bars-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 10.5px;
+  color: var(--ink-2);
+  margin-bottom: 4px;
+}
+
+.cat-bars-head b {
+  font-size: 10px;
+  font-weight: 550;
+  color: var(--ink-3);
+}
+
+.cat-bars-track {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--surface-3);
+  overflow: hidden;
+}
+
+.cat-bars-track span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--emerald-2), var(--emerald-3));
+  animation: fc-grow 700ms var(--ease) both;
+  transform-origin: left;
+}
+
+/* ---------- Gauge ---------- */
+.gauge {
+  position: relative;
+  width: 184px;
+  height: 184px;
+  flex-shrink: 0;
+}
+
+.gauge svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.gauge-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  pointer-events: none;
+  padding-top: 6px;
+}
+
+.gauge-center strong {
+  font-size: 31px;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  color: var(--ink);
+}
+
+.gauge-center span {
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  text-align: center;
+  max-width: 90px;
+}
+
+.gauge-center em {
+  font-style: normal;
+  font-size: 8.5px;
+  color: var(--gold);
+  margin-top: 3px;
+}
+
+/* ---------- Mini bars ---------- */
+.mini-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+  height: 116px;
+  padding-top: 14px;
+}
+
+.mini-bar {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  height: 100%;
+  min-width: 0;
+}
+
+.mini-bar-value {
+  font-size: 9.5px;
+  color: var(--ink-3);
+  font-weight: 600;
+}
+
+.mini-bar-track {
+  flex: 1;
+  width: min(30px, 70%);
+  min-height: 0;
+  display: flex;
+  align-items: flex-end;
+  border-radius: 6px;
+  background: var(--surface-3);
+  overflow: hidden;
+}
+
+.mini-bar-track span {
+  width: 100%;
+  border-radius: 6px;
+  background: linear-gradient(180deg, var(--gold-2), var(--emerald-2));
+  min-height: 8px;
+  transition: height 300ms var(--ease);
+}
+
+.mini-bar-label {
+  font-size: 8.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  text-align: center;
+}
+
+@media (max-width: 640px) {
+  .area-chart {
+    min-height: 200px;
+  }
+
+  .donut-wrap {
+    gap: 12px;
+  }
+
+  .donut-legend {
+    min-width: 120px;
+  }
+}
