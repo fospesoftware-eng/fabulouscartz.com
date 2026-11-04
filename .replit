@@ -39,3 +39,7 @@ publicDir = "dist"
 [[deployment.rewrites]]
 from = "/*"
 to = "/index.html"
+
+[[ports]]
+localPort = 5000
+externalPort = 80
