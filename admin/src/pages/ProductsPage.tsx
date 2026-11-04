@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   Archive,
@@ -28,7 +28,7 @@ import {
   TableSkeleton,
 } from "../components/ui";
 import { useUI } from "../context/UIContext";
-import { api } from "../lib/api";
+import { resources } from "../lib/normalize";
 import { useDebounced, useResource } from "../lib/hooks";
 import { dateShort, foldWords, money, STATUS_TONE } from "../lib/utils";
 
@@ -55,22 +55,22 @@ export function ProductsPage() {
   const [confirmArchive, setConfirmArchive] = useState<Product | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const query = useMemo(() => {
-    const params = new URLSearchParams();
-    params.set("page", String(page));
-    params.set("pageSize", "12");
-    params.set("sort", sort);
-    if (debouncedQ) params.set("q", debouncedQ);
-    if (status) params.set("status", status);
-    if (categoryId) params.set("categoryId", categoryId);
-    if (vendorId) params.set("vendorId", vendorId);
-    if (mode) params.set("mode", mode);
-    return params.toString();
-  }, [page, sort, debouncedQ, status, categoryId, vendorId, mode]);
-
-  const list = useResource<Paginated<Product>>(() => api.get<Paginated<Product>>(`/products?${query}`), [query]);
-  const categories = useResource<{ data: Category[] }>(() => api.get<{ data: Category[] }>("/categories"), []);
-  const vendors = useResource<{ data: Vendor[] }>(() => api.get<{ data: Vendor[] }>("/vendors"), []);
+  const list = useResource<Paginated<Product>>(
+    () =>
+      resources.products({
+        page,
+        pageSize: 12,
+        sort,
+        q: debouncedQ,
+        status,
+        categoryId,
+        vendorId,
+        mode,
+      }),
+    [page, sort, debouncedQ, status, categoryId, vendorId, mode],
+  );
+  const categories = useResource<{ data: Category[] }>(() => resources.categories(), []);
+  const vendors = useResource<{ data: Vendor[] }>(() => resources.vendors(), []);
 
   const categoryName = (id: string) => categories.data?.data.find((entry) => entry.id === id)?.name ?? "Unassigned";
   const vendorName = (id: string) => vendors.data?.data.find((entry) => entry.id === id)?.name ?? "Unassigned";
@@ -93,20 +93,14 @@ export function ProductsPage() {
     setSelected(selected.length === ids.length ? [] : ids);
   };
 
-  const duplicate = async (product: Product) => {
-    try {
-      const copy = await api.post<Product>(`/products/${product.id}/duplicate`);
-      notify({ kind: "success", title: "Draft copy created", description: `${copy.name} is waiting in the catalogue.` });
-      navigate(`/products/${copy.id}`);
-    } catch (cause) {
-      notify({ kind: "error", title: "Could not duplicate", description: cause instanceof Error ? cause.message : "Try again." });
-    }
+  const duplicate = async (_product: Product) => {
+    notify({ kind: "info", title: "Not available yet", description: "Duplicating a product has no API endpoint. Create it from the editor instead." });
   };
 
   const togglePublish = async (product: Product) => {
     const nextStatus = product.status === "published" ? "draft" : "published";
     try {
-      const updated = await api.patch<Product>(`/products/${product.id}`, { status: nextStatus });
+      const updated = await resources.updateProductStatus(product.id, nextStatus === "published");
       list.setData((current) => (current ? { ...current, data: current.data.map((row) => (row.id === updated.id ? updated : row)) } : current));
       notify({
         kind: "success",
@@ -122,7 +116,7 @@ export function ProductsPage() {
     if (!confirmArchive) return;
     setBusy(true);
     try {
-      await api.del(`/products/${confirmArchive.id}`);
+      await resources.archiveProduct(confirmArchive.id);
       notify({ kind: "success", title: "Product archived", description: `${confirmArchive.name} is hidden from the storefront.` });
       setConfirmArchive(null);
       list.reload();
@@ -137,8 +131,10 @@ export function ProductsPage() {
     if (!selected.length) return;
     setBusy(true);
     try {
-      const result = await api.post<{ updated: number; status: string }>("/products/bulk", { ids: selected, action });
-      notify({ kind: "success", title: `${result.updated} products updated`, description: `Bulk action: ${action}.` });
+      await Promise.all(
+        selected.map((id) => (action === "archive" ? resources.archiveProduct(id) : resources.updateProductStatus(id, action === "publish"))),
+      );
+      notify({ kind: "success", title: `${selected.length} products updated`, description: `Bulk action: ${action}.` });
       setSelected([]);
       list.reload();
     } catch (cause) {

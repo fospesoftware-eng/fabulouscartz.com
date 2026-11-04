@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { ArrowRight, Boxes, ClipboardList, History, Layers, Minus, Plus, RotateCcw, Search } from "lucide-react";
 import type { InventoryRow, Paginated, StockMovement } from "../../shared/types";
@@ -17,7 +17,7 @@ import {
   TableSkeleton,
 } from "../components/ui";
 import { useUI } from "../context/UIContext";
-import { api } from "../lib/api";
+import { resources } from "../lib/normalize";
 import { useDebounced, useResource } from "../lib/hooks";
 import { dateTime, foldWords, money } from "../lib/utils";
 
@@ -55,27 +55,20 @@ export function InventoryPage() {
   const [movementQ, setMovementQ] = useState("");
   const movementDebounced = useDebounced(movementQ, 280);
 
-  const levelsQuery = useMemo(() => {
-    const params = new URLSearchParams();
-    if (status) params.set("status", status);
-    if (debouncedQ) params.set("q", debouncedQ);
-    return params.toString();
-  }, [status, debouncedQ]);
-
-  const levels = useResource<InventoryData>(() => api.get<InventoryData>(`/inventory?${levelsQuery}`), [levelsQuery]);
-
-  const movementQuery = useMemo(() => {
-    const params = new URLSearchParams();
-    params.set("page", String(movementPage));
-    params.set("pageSize", "12");
-    if (movementDebounced) params.set("q", movementDebounced);
-    if (historyFor) params.set("sku", historyFor);
-    return params.toString();
-  }, [movementPage, movementDebounced, historyFor]);
+  const levels = useResource<InventoryData>(
+    () => resources.inventory({ status, q: debouncedQ }) as Promise<InventoryData>,
+    [status, debouncedQ],
+  );
 
   const movements = useResource<Paginated<StockMovement>>(
-    () => api.get<Paginated<StockMovement>>(`/inventory/movements?${movementQuery}`),
-    [movementQuery],
+    () =>
+      resources.movements({
+        page: movementPage,
+        pageSize: 12,
+        q: movementDebounced,
+        sku: historyFor ?? undefined,
+      }) as Promise<Paginated<StockMovement>>,
+    [movementPage, movementDebounced, historyFor],
   );
 
   const summary = levels.data?.summary;
@@ -365,7 +358,7 @@ function AdjustDrawer({
     setBusy(true);
     setError(null);
     try {
-      await api.post("/inventory/adjust", { sku: row.sku, delta, reason, note });
+      await resources.adjustInventoryBySku(row.sku, delta, reason, note);
       notify({
         kind: "success",
         title: "Stock adjusted",

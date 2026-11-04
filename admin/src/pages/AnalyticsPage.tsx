@@ -4,7 +4,7 @@ import type { AnalyticsData, Category, SeriesPoint } from "../../shared/types";
 import { AreaChart, CategoryBars, DonutChart, MiniBars, Sparkline } from "../components/charts";
 import { Badge, Button, Card, ErrorState, Segmented, StatDelta } from "../components/ui";
 import { useUI } from "../context/UIContext";
-import { api, downloadCsv } from "../lib/api";
+import { resources } from "../lib/normalize";
 import { useResource } from "../lib/hooks";
 import { dateShort, money, num } from "../lib/utils";
 
@@ -18,22 +18,15 @@ export function AnalyticsPage() {
   const [range, setRange] = useState(30);
   const [categoryId, setCategoryId] = useState("");
   const [exporting, setExporting] = useState(false);
-  const categories = useResource<{ data: Category[] }>(() => api.get<{ data: Category[] }>("/categories"), []);
+  const categories = useResource<{ data: Category[] }>(() => resources.categories(), []);
 
-  const params = new URLSearchParams();
-  params.set("range", String(range));
-  if (categoryId) params.set("categoryId", categoryId);
-
-  const analytics = useResource<AnalyticsData>(() => api.get<AnalyticsData>(`/analytics?${params.toString()}`), [range, categoryId]);
+  const analytics = useResource<AnalyticsData>(() => resources.analytics(range), [range]);
   const data = analytics.data;
 
   const exportCsv = async () => {
     setExporting(true);
     try {
-      await downloadCsv(`/analytics/export.csv?${params.toString()}`, `fabulouscartz-analytics-${range}d.csv`);
-      notify({ kind: "success", title: "CSV exported", description: `Analytics for the last ${range} days.` });
-    } catch (cause) {
-      notify({ kind: "error", title: "Export failed", description: cause instanceof Error ? cause.message : "Try again." });
+      notify({ kind: "info", title: "Not available yet", description: "There is no analytics CSV endpoint on the API; export from the tables instead." });
     } finally {
       setExporting(false);
     }

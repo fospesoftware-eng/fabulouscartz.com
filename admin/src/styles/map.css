@@ -561,7 +561,73 @@
   max-height: 300px;
 }
 
+/* ---------- Metric / layer / window controls ---------- */
+.usmap-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.usmap-range {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.usmap-range label {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.usmap-range label span {
+  font-size: 8.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+}
+
+.usmap-range input[type="date"] {
+  height: 28px;
+  padding: 0 8px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink-2);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.usmap-range input[type="date"]:focus-visible {
+  outline: none;
+  border-color: var(--gold);
+}
+
+/* Rental-only states: striped overlay so they never read as zero-activity. */
+.usmap-state.is-rental-only {
+  fill: var(--map-empty);
+  stroke-dasharray: 3 2;
+  stroke: var(--gold);
+}
+
+.usmap-swatch.is-rental-only {
+  background:
+    repeating-linear-gradient(45deg, var(--map-empty) 0 3px, color-mix(in oklab, var(--gold) 45%, transparent) 3px 6px);
+  border-color: var(--gold);
+}
+
+.usmap-legend-note {
+  font-style: italic;
+  color: var(--ink-4);
+}
+
 @media (max-width: 920px) {
+  .usmap-controls {
+    align-items: flex-start;
+  }
   .usmap-body {
     grid-template-columns: 1fr;
   }

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { ArrowRight, ClipboardList, Search, ShieldCheck } from "lucide-react";
 import type { AuditEntry, Paginated } from "../../shared/types";
 import { Avatar, Badge, Card, EmptyState, ErrorState, Pagination, SearchInput, TableSkeleton } from "../components/ui";
-import { api } from "../lib/api";
+import { resources } from "../lib/normalize";
 import { useDebounced, useResource } from "../lib/hooks";
 import { foldWords, relative } from "../lib/utils";
 
@@ -14,13 +14,10 @@ export function AuditPage() {
   const [entity, setEntity] = useState("");
   const [page, setPage] = useState(1);
 
-  const query = new URLSearchParams();
-  query.set("page", String(page));
-  query.set("pageSize", "20");
-  if (debouncedQ) query.set("q", debouncedQ);
-  if (entity) query.set("entity", entity);
-
-  const audit = useResource<Paginated<AuditEntry>>(() => api.get<Paginated<AuditEntry>>(`/audit?${query.toString()}`), [page, debouncedQ, entity]);
+  const audit = useResource<Paginated<AuditEntry>>(
+    () => resources.audit({ page, pageSize: 20, q: debouncedQ, entity }),
+    [page, debouncedQ, entity],
+  );
   const data = audit.data;
 
   return (

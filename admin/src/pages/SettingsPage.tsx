@@ -7,6 +7,7 @@ import { Avatar, Badge, Button, Card, ErrorState, Field, IconButton, Segmented, 
 import { useAuth } from "../context/AuthContext";
 import { useUI } from "../context/UIContext";
 import { api } from "../lib/api";
+import { resources } from "../lib/normalize";
 import { useResource } from "../lib/hooks";
 import { foldWords, relative } from "../lib/utils";
 
@@ -39,8 +40,8 @@ const EMPTY_TEAM: TeamDraft = { name: "", email: "", title: "", role: "fulfilmen
 export function SettingsPage() {
   const { user } = useAuth();
   const { notify } = useUI();
-  const settings = useResource<Settings>(() => api.get<Settings>("/settings"), []);
-  const team = useResource<{ data: User[] }>(() => api.get<{ data: User[] }>("/team"), []);
+  const settings = useResource<Settings>(() => resources.settings(), []);
+  const team = useResource<{ data: User[] }>(() => resources.team(), []);
   const [draft, setDraft] = useState<Settings | null>(null);
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);

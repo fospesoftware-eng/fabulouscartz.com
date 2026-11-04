@@ -20,7 +20,7 @@ import { UsOrderMap } from "../components/UsOrderMap";
 import { AttentionFeed, RentalPulse } from "../components/RentalPulse";
 import { Badge, Button, Card, ErrorState, IconButton, Segmented } from "../components/ui";
 import { useUI } from "../context/UIContext";
-import { api } from "../lib/api";
+import { resources } from "../lib/normalize";
 import { useResource } from "../lib/hooks";
 import { foldWords, money, relative, STATUS_TONE } from "../lib/utils";
 
@@ -107,7 +107,7 @@ export function DashboardPage() {
     event.currentTarget.style.setProperty("--py", "0");
   };
   const { data, error, loading, reload } = useResource<DashboardData>(
-    () => api.get<DashboardData>(`/dashboard?range=${range}`),
+    () => resources.dashboard(range),
     [range],
   );
 
@@ -117,7 +117,7 @@ export function DashboardPage() {
   };
 
   if (error) {
-    return <ErrorState title="The command deck is offline" body={error} onRetry={reload} />;
+    return <ErrorState title="Could not load the dashboard" body={error} onRetry={reload} />;
   }
 
   if (loading || !data) {

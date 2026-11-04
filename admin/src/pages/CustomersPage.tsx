@@ -16,7 +16,7 @@ import {
   TableSkeleton,
 } from "../components/ui";
 import { useUI } from "../context/UIContext";
-import { api } from "../lib/api";
+import { resources } from "../lib/normalize";
 import { useDebounced, useResource } from "../lib/hooks";
 import { dateShort, foldWords, money, relative, STATUS_TONE } from "../lib/utils";
 
@@ -45,14 +45,10 @@ export function CustomersPage() {
   const [page, setPage] = useState(1);
   const [detailId, setDetailId] = useState<string | null>(null);
 
-  const query = new URLSearchParams();
-  query.set("page", String(page));
-  query.set("pageSize", "12");
-  query.set("sort", sort);
-  if (debouncedQ) query.set("q", debouncedQ);
-  if (segment) query.set("segment", segment);
-
-  const list = useResource<Paginated<Customer>>(() => api.get<Paginated<Customer>>(`/customers?${query.toString()}`), [page, sort, debouncedQ, segment]);
+  const list = useResource<Paginated<Customer>>(
+    () => resources.customers({ page, pageSize: 12, q: debouncedQ, segment, sort }) as Promise<Paginated<Customer>>,
+    [page, sort, debouncedQ, segment],
+  );
   const data = list.data;
 
   return (
@@ -199,11 +195,15 @@ function CustomerDrawer({
   onSaved: () => void;
   notify: ReturnType<typeof useUI>["notify"];
 }) {
-  const detail = useResource<CustomerDetail>(() => api.get<CustomerDetail>(`/customers/${id}`), [id], { enabled: Boolean(id) });
+  const detail = useResource<CustomerDetail>(
+    () => resources.customer(id ?? "") as unknown as Promise<CustomerDetail>,
+    [id],
+    { enabled: Boolean(id) },
+  );
   const [notes, setNotes] = useState("");
   const [tagInput, setTagInput] = useState("");
   const [segment, setSegment] = useState("");
-  const [busy, setBusy] = useState(false);
+  const busy = false;
 
   useEffect(() => {
     if (detail.data) {
@@ -215,19 +215,9 @@ function CustomerDrawer({
   if (!id) return null;
   const customer = detail.data?.customer;
 
-  const save = async (patch: Partial<Customer>) => {
+  const save = async (_patch: Partial<Customer>) => {
     if (!customer) return;
-    setBusy(true);
-    try {
-      const updated = await api.patch<Customer>(`/customers/${customer.id}`, patch);
-      detail.setData((current) => (current ? { ...current, customer: updated } : current));
-      notify({ kind: "success", title: "Customer updated", description: `${updated.name} · ${updated.segment}` });
-      onSaved();
-    } catch (cause) {
-      notify({ kind: "error", title: "Could not save customer", description: cause instanceof Error ? cause.message : "Try again." });
-    } finally {
-      setBusy(false);
-    }
+    notify({ kind: "info", title: "Not available yet", description: "Customer notes, tags and segments cannot be written through the API." });
   };
 
   const addTag = () => {

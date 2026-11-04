@@ -6,6 +6,7 @@ import { Badge, Button, Card, EmptyState, ErrorState, Field, IconButton, Toggle 
 import { useAuth } from "../context/AuthContext";
 import { useUI } from "../context/UIContext";
 import { api } from "../lib/api";
+import { resources } from "../lib/normalize";
 import { useResource } from "../lib/hooks";
 import { dateShort, money } from "../lib/utils";
 
@@ -40,7 +41,7 @@ const toIso = (date: string) => `${date}T00:00:00+05:30`;
 export function DiscountsPage() {
   const { notify } = useUI();
   const { user } = useAuth();
-  const coupons = useResource<{ data: Coupon[] }>(() => api.get<{ data: Coupon[] }>("/discounts"), []);
+  const coupons = useResource<{ data: Coupon[] }>(() => resources.coupons(), []);
   const [editing, setEditing] = useState<Coupon | "new" | null>(null);
   const [draft, setDraft] = useState<Draft>(EMPTY);
   const [saving, setSaving] = useState(false);

@@ -5,6 +5,7 @@ import { ConfirmDialog, Modal } from "../components/overlay";
 import { Badge, Button, Card, EmptyState, ErrorState, Field, IconButton, Toggle } from "../components/ui";
 import { useUI } from "../context/UIContext";
 import { api } from "../lib/api";
+import { resources } from "../lib/normalize";
 import { useResource } from "../lib/hooks";
 import { cn } from "../lib/utils";
 
@@ -21,8 +22,8 @@ const EMPTY: Draft = { name: "", tagline: "", description: "", image: "", accent
 
 export function CategoriesPage() {
   const { notify } = useUI();
-  const categories = useResource<{ data: Category[] }>(() => api.get<{ data: Category[] }>("/categories"), []);
-  const products = useResource<Paginated<Product>>(() => api.get<Paginated<Product>>("/products?pageSize=100"), []);
+  const categories = useResource<{ data: Category[] }>(() => resources.categories(), []);
+  const products = useResource<Paginated<Product>>(() => resources.products({ pageSize: 100 }), []);
   const [editing, setEditing] = useState<Category | "new" | null>(null);
   const [draft, setDraft] = useState<Draft>(EMPTY);
   const [saving, setSaving] = useState(false);

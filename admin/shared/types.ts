@@ -32,6 +32,7 @@ export interface User {
   id: string;
   name: string;
   email: string;
+  username?: string | null;
   role: Role;
   title: string;
   phone?: string;

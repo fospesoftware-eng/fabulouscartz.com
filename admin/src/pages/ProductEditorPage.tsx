@@ -19,6 +19,7 @@ import { ConfirmDialog } from "../components/overlay";
 import { Badge, Button, Card, ErrorState, Field, IconButton, Toggle } from "../components/ui";
 import { useUI } from "../context/UIContext";
 import { ApiError, api } from "../lib/api";
+import { resources } from "../lib/normalize";
 import { useResource } from "../lib/hooks";
 import { cn, foldWords, money } from "../lib/utils";
 
@@ -96,9 +97,9 @@ export function ProductEditorPage() {
   const navigate = useNavigate();
   const { notify } = useUI();
   const isNew = !id;
-  const product = useResource<Product>(() => api.get<Product>(`/products/${id}`), [id], { enabled: !isNew });
-  const categories = useResource<{ data: Category[] }>(() => api.get<{ data: Category[] }>("/categories"), []);
-  const vendors = useResource<{ data: Vendor[] }>(() => api.get<{ data: Vendor[] }>("/vendors"), []);
+  const product = useResource<Product>(() => resources.product(id ?? ""), [id], { enabled: !isNew });
+  const categories = useResource<{ data: Category[] }>(() => resources.categories(), []);
+  const vendors = useResource<{ data: Vendor[] }>(() => resources.vendors(), []);
 
   const [draft, setDraft] = useState<Draft>(EMPTY);
   const [dirty, setDirty] = useState(false);

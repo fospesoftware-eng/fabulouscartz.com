@@ -5,6 +5,7 @@ import { ConfirmDialog, Modal } from "../components/overlay";
 import { Badge, Button, Card, EmptyState, ErrorState, Field, IconButton, Segmented } from "../components/ui";
 import { useUI } from "../context/UIContext";
 import { api } from "../lib/api";
+import { resources } from "../lib/normalize";
 import { useResource } from "../lib/hooks";
 import { foldWords, relative } from "../lib/utils";
 
@@ -32,7 +33,7 @@ const EMPTY: Draft = {
 
 export function ContentPage() {
   const { notify } = useUI();
-  const content = useResource<{ data: ContentEntry[] }>(() => api.get<{ data: ContentEntry[] }>("/content"), []);
+  const content = useResource<{ data: ContentEntry[] }>(() => resources.content(), []);
   const [type, setType] = useState("");
   const [editing, setEditing] = useState<ContentEntry | "new" | null>(null);
   const [draft, setDraft] = useState<Draft>(EMPTY);

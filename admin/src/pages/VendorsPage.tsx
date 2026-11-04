@@ -5,6 +5,7 @@ import { ConfirmDialog, Modal } from "../components/overlay";
 import { Badge, Button, Card, EmptyState, ErrorState, Field, IconButton, Toggle } from "../components/ui";
 import { useUI } from "../context/UIContext";
 import { api } from "../lib/api";
+import { resources } from "../lib/normalize";
 import { useResource } from "../lib/hooks";
 import { money } from "../lib/utils";
 
@@ -23,7 +24,7 @@ const EMPTY: Draft = { name: "", email: "", location: "", description: "", ratin
 
 export function VendorsPage() {
   const { notify } = useUI();
-  const vendors = useResource<{ data: VendorRow[] }>(() => api.get<{ data: VendorRow[] }>("/vendors"), []);
+  const vendors = useResource<{ data: VendorRow[] }>(() => resources.vendors() as unknown as Promise<{ data: VendorRow[] }>, []);
   const [editing, setEditing] = useState<VendorRow | "new" | null>(null);
   const [draft, setDraft] = useState<Draft>(EMPTY);
   const [saving, setSaving] = useState(false);

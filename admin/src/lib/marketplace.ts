@@ -13,31 +13,20 @@ import type {
   Seller,
   SellerWorkspace,
 } from "../../shared/marketplace";
-import { request } from "./api";
+import { resources } from "./normalize";
 
-/* Typed adapter for the /admin marketplace + rental contract.
-   Point VITE_MARKETPLACE_BASE at the real service (absolute URL or path)
-   and every screen follows without further changes. */
-const BASE = (import.meta.env.VITE_MARKETPLACE_BASE as string | undefined) ?? "/api/admin";
-
-function qs(params: Record<string, string | number | undefined>): string {
-  const search = new URLSearchParams();
-  Object.entries(params).forEach(([key, value]) => {
-    if (value !== undefined && value !== "" && value !== null) search.set(key, String(value));
-  });
-  const text = search.toString();
-  return text ? `?${text}` : "";
-}
-
-type SellerPage = Paginated<Seller> & {
+/* Thin compatibility surface: every call now delegates to the single
+   normaliser in normalize.ts. Kept so screens keep importing `marketplace`
+   without knowing wire details. */
+export type SellerPage = Paginated<Seller> & {
   facets: { pending: number; approved: number; rejected: number; suspended: number };
 };
-type PayoutPage = {
+export type PayoutPage = {
   data: Payout[];
   summary: { due: number; paid: number; failed: number; count: number };
   periods: string[];
 };
-type ListingPayload = {
+export type ListingPayload = {
   data: RentalListing[];
   facets: { pending: number; approved: number; paused: number; suspended: number };
   cities: string[];
@@ -46,78 +35,49 @@ type ListingPayload = {
 export const marketplace = {
   /* Sellers */
   sellers: (params: { q?: string; kycStatus?: string; status?: string; page?: number; pageSize?: number } = {}) =>
-    request<SellerPage>(`${BASE}/sellers${qs(params)}`),
-  seller: (id: string) => request<SellerWorkspace>(`${BASE}/sellers/${id}`),
-  reviewSeller: (id: string, decision: "approve" | "reject", reason?: string) =>
-    request<Seller>(`${BASE}/sellers/${id}/review`, { method: "POST", body: JSON.stringify({ decision, reason }) }),
-  setCommission: (id: string, rate: number) =>
-    request<Seller>(`${BASE}/sellers/${id}/commission`, { method: "PATCH", body: JSON.stringify({ rate }) }),
-  suspendSeller: (id: string, reason: string) =>
-    request<Seller>(`${BASE}/sellers/${id}/suspend`, { method: "POST", body: JSON.stringify({ reason }) }),
+    resources.sellers(params) as Promise<SellerPage>,
+  seller: (id: string) => resources.seller(id),
+  reviewSeller: (id: string, decision: "approve" | "reject", reason?: string) => resources.reviewSeller(id, decision, reason),
+  setCommission: (id: string, rate: number) => resources.setCommission(id, rate),
+  suspendSeller: (id: string, reason: string) => resources.suspendSeller(id, reason),
 
   /* Payouts */
-  payouts: (params: { period?: string; status?: string } = {}) =>
-    request<PayoutPage>(`${BASE}/payouts${qs(params)}`),
-  markPaid: (id: string, reference: string) =>
-    request<Payout>(`${BASE}/payouts/${id}/mark-paid`, { method: "POST", body: JSON.stringify({ reference }) }),
+  payouts: (params: { period?: string; status?: string } = {}) => resources.payouts(params) as Promise<PayoutPage>,
+  markPaid: (id: string, reference: string) => resources.markPaid(id, reference),
 
   /* Rental listings */
   listings: (params: { status?: string; city?: string; ownerType?: string } = {}) =>
-    request<ListingPayload>(`${BASE}/rentals/listings${qs(params)}`),
+    resources.listings(params) as Promise<ListingPayload>,
   moderateListing: (id: string, action: "approve" | "pause" | "suspend", reason?: string) =>
-    request<RentalListing>(`${BASE}/rentals/listings/${id}/moderate`, {
-      method: "POST",
-      body: JSON.stringify({ action, reason }),
-    }),
+    resources.moderateListing(id, action, reason),
 
   /* Bookings */
-  bookings: (params: Record<string, string | undefined> = {}) =>
-    request<{ data: Booking[]; total: number }>(`${BASE}/rentals/bookings${qs(params)}`),
-  booking: (id: string) => request<Booking>(`${BASE}/rentals/bookings/${id}`),
-  transition: (id: string, to: BookingState, note?: string) =>
-    request<Booking>(`${BASE}/rentals/bookings/${id}/transition`, {
-      method: "POST",
-      body: JSON.stringify({ to, note }),
-    }),
-  addBookingNote: (id: string, body: string) =>
-    request<Booking>(`${BASE}/rentals/bookings/${id}/notes`, {
-      method: "POST",
-      body: JSON.stringify({ body }),
-    }),
-  remind: (id: string) => request<Booking>(`${BASE}/rentals/bookings/${id}/remind`, { method: "POST" }),
+  bookings: (params: { q?: string } = {}) => resources.bookings(params),
+  booking: (id: string) => resources.booking(id),
+  transition: (id: string, to: BookingState, note?: string) => resources.transition(id, to, note),
+  addBookingNote: (_id: string, _body: string): Promise<Booking> => resources.addBookingNote(),
+  remind: (_id: string) => resources.remind(),
 
   /* Calendar */
   calendar: (params: { from?: string; to?: string; listingId?: string } = {}) =>
-    request<CalendarPayload>(`${BASE}/rentals/calendar${qs(params)}`),
+    resources.calendar(params) as Promise<CalendarPayload>,
 
   /* Deposits */
-  deposits: (state?: string) => request<{ data: DepositRow[] }>(`${BASE}/rentals/deposits${qs({ state })}`),
-  captureDeposit: (bookingId: string, amount: number, reason: string) =>
-    request<Booking>(`${BASE}/rentals/bookings/${bookingId}/deposit/capture`, {
-      method: "POST",
-      body: JSON.stringify({ amount, reason }),
-    }),
-  releaseDeposit: (bookingId: string, reason?: string) =>
-    request<Booking>(`${BASE}/rentals/bookings/${bookingId}/deposit/release`, {
-      method: "POST",
-      body: JSON.stringify({ reason }),
-    }),
+  deposits: (state?: string) => resources.deposits(state) as Promise<{ data: DepositRow[] }>,
+  captureDeposit: (bookingId: string, amount: number, reason: string) => resources.captureDeposit(bookingId, amount, reason),
+  releaseDeposit: (bookingId: string, reason?: string) => resources.releaseDeposit(bookingId, reason),
 
   /* Overdue + disputes */
-  overdue: () => request<{ data: OverdueBooking[] }>(`${BASE}/rentals/overdue`),
-  disputes: (status?: string) => request<{ data: Dispute[] }>(`${BASE}/rentals/disputes${qs({ status })}`),
-  openDispute: (bookingId: string, reason: string) =>
-    request<Dispute>(`${BASE}/rentals/disputes`, { method: "POST", body: JSON.stringify({ bookingId, reason }) }),
+  overdue: () => resources.overdue() as Promise<{ data: OverdueBooking[] }>,
+  disputes: (status?: string) => resources.disputes(status) as Promise<{ data: Dispute[] }>,
+  openDispute: (_bookingId: string, _reason: string): Promise<Dispute> => resources.openDispute(),
   resolveDispute: (id: string, outcome: "renter_pays" | "owner_pays" | "split" | "refunded", amount: number, note: string) =>
-    request<Dispute>(`${BASE}/rentals/disputes/${id}/resolve`, {
-      method: "POST",
-      body: JSON.stringify({ outcome, amount, note }),
-    }),
+    resources.resolveDispute(id, outcome, note, amount) as Promise<Dispute>,
 
   /* Analytics */
-  analytics: (range: number) => request<RentalAnalytics>(`${BASE}/rentals/analytics${qs({ range })}`),
+  analytics: (range: number) => resources.rentalAnalytics(range) as Promise<RentalAnalytics>,
 
-  _base: BASE,
+  _base: "",
 };
 
 export type MarketplaceListingStatus = RentalListingStatus;

@@ -27,7 +27,7 @@ import {
   TableSkeleton,
 } from "../components/ui";
 import { useUI } from "../context/UIContext";
-import { api } from "../lib/api";
+import { resources } from "../lib/normalize";
 import { useDebounced, useResource } from "../lib/hooks";
 import { dateShort, dateTime, foldWords, money, STATUS_TONE } from "../lib/utils";
 
@@ -81,8 +81,22 @@ export function OrdersPage() {
     return params.toString();
   }, [page, sort, debouncedQ, status, stateFilter, paymentStatus, from, to]);
 
-  const list = useResource<Paginated<Order>>(() => api.get<Paginated<Order>>(`/orders?${query}`), [query]);
-  const detail = useResource<Order>(() => api.get<Order>(`/orders/${detailId}`), [detailId], { enabled: Boolean(detailId) });
+  const list = useResource<Paginated<Order>>(
+    () =>
+      resources.orders({
+        page,
+        pageSize: 15,
+        sort,
+        q: debouncedQ,
+        status,
+        state: stateFilter,
+        paymentStatus,
+        from,
+        to,
+      }),
+    [page, sort, debouncedQ, status, stateFilter, paymentStatus, from, to],
+  );
+  const detail = useResource<Order>(() => resources.order(detailId ?? ""), [detailId], { enabled: Boolean(detailId) });
 
   useEffect(() => {
     setSelected([]);
@@ -103,7 +117,7 @@ export function OrdersPage() {
 
   const updateStatus = async (order: Order, nextStatus: OrderStatus) => {
     try {
-      const updated = await api.patch<Order>(`/orders/${order.id}`, { status: nextStatus });
+      const updated = await resources.updateOrderStatus(order.id, nextStatus);
       detail.setData(updated);
       list.setData((current) => (current ? { ...current, data: current.data.map((row) => (row.id === updated.id ? updated : row)) } : current));
       notify({ kind: "success", title: `${order.number} moved to ${foldWords(updated.status)}`, description: "The timeline and audit log were updated." });
@@ -112,36 +126,21 @@ export function OrdersPage() {
     }
   };
 
-  const updatePayment = async (order: Order, nextPayment: PaymentStatus) => {
-    try {
-      const updated = await api.patch<Order>(`/orders/${order.id}`, { paymentStatus: nextPayment });
-      detail.setData(updated);
-      list.setData((current) => (current ? { ...current, data: current.data.map((row) => (row.id === updated.id ? updated : row)) } : current));
-      notify({ kind: "success", title: `Payment marked ${nextPayment}`, description: `${order.number} · ${money(order.total)}` });
-    } catch (cause) {
-      notify({ kind: "error", title: "Payment not changed", description: cause instanceof Error ? cause.message : "The API rejected the update." });
-    }
+  const updatePayment = async (_order: Order, _nextPayment: PaymentStatus) => {
+    notify({ kind: "info", title: "Not available yet", description: "Payment status is owned by the payments service and cannot be edited here." });
   };
 
-  const addNote = async (body: string) => {
-    if (!detail.data) return false;
-    try {
-      const updated = await api.post<Order>(`/orders/${detail.data.id}/notes`, { body });
-      detail.setData(updated);
-      notify({ kind: "success", title: "Note added", description: "Visible to every operator on this order." });
-      return true;
-    } catch (cause) {
-      notify({ kind: "error", title: "Note not saved", description: cause instanceof Error ? cause.message : "Try a longer note." });
-      return false;
-    }
+  const addNote = async (_body: string) => {
+    notify({ kind: "info", title: "Not available yet", description: "Order notes cannot be written through the API." });
+    return false;
   };
 
   const applyBulk = async () => {
     if (!bulkStatus || selected.length === 0) return;
     setBulkLoading(true);
     try {
-      const result = await api.post<{ updated: number }>("/orders/bulk-status", { ids: selected, status: bulkStatus });
-      notify({ kind: "success", title: `${result.updated} orders updated`, description: `All selected orders are now ${foldWords(bulkStatus)}.` });
+      await Promise.all(selected.map((id) => resources.updateOrderStatus(id, bulkStatus)));
+      notify({ kind: "success", title: `${selected.length} orders updated`, description: `All selected orders are now ${foldWords(bulkStatus)}.` });
       setSelected([]);
       setBulkStatus("");
       list.reload();

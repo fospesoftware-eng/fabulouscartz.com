@@ -30,7 +30,7 @@ import {
   X,
 } from "lucide-react";
 import type { Role } from "../../shared/types";
-import { api } from "../lib/api";
+import { resources } from "../lib/normalize";
 import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
 import { useUI } from "../context/UIContext";
@@ -128,6 +128,12 @@ const SECTION_LABEL: Record<string, string> = {
   "/analytics": "Analytics",
   "/audit": "Audit log",
   "/settings": "Settings",
+  "/rentals/listings": "Rental listings",
+  "/rentals/bookings": "Bookings",
+  "/rentals/calendar": "Rental calendar",
+  "/rentals/deposits": "Deposits",
+  "/rentals/overdue": "Overdue",
+  "/rentals/disputes": "Disputes",
 };
 
 export function Shell() {
@@ -146,8 +152,8 @@ export function Shell() {
 
   useEffect(() => {
     const load = () => {
-      api
-        .get<{ unread: number }>("/notifications")
+      resources
+        .notifications()
         .then((result) => setUnread(result.unread))
         .catch(() => undefined);
     };
@@ -249,7 +255,7 @@ export function Shell() {
                   <Avatar name={user.name} size={38} tone="gold" />
                   <div>
                     <strong>{user.name}</strong>
-                    <span>{user.email}</span>
+                    <span>{user.username ?? user.email}</span>
                     <em>{foldWords(user.role)} access</em>
                   </div>
                 </div>

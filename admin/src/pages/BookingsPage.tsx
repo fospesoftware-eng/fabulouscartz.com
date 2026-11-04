@@ -75,7 +75,6 @@ export function BookingsPage() {
   const [q, setQ] = useState("");
   const debounced = useDebounced(q, 280);
   const [selected, setSelected] = useState<Booking | null>(null);
-  const [note, setNote] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
   const [captureOpen, setCaptureOpen] = useState(false);
   const [captureAmount, setCaptureAmount] = useState(0);
@@ -135,23 +134,7 @@ export function BookingsPage() {
     }
   };
 
-  const addNote = async () => {
-    if (!selected || note.trim().length < 3) return;
-    setBusy("note");
-    try {
-      const updated = await marketplace.addBookingNote(selected.id, note.trim());
-      setSelected(updated);
-      detail.setData(updated);
-      setNote("");
-      notify({ kind: "success", title: "Note added", description: "The operations thread was updated." });
-    } catch (cause) {
-      notify({ kind: "error", title: "Note not saved", description: cause instanceof Error ? cause.message : "Try a longer note." });
-    } finally {
-      setBusy(null);
-    }
-  };
-
-  if (list.error) return <ErrorState title="The rental board is offline" body={list.error} onRetry={list.reload} />;
+  if (list.error) return <ErrorState title="Could not load the rental board" body={list.error} onRetry={list.reload} />;
 
   const bookings = list.data?.data ?? [];
   const board = BOOKING_STATES.map((state) => ({ state, items: bookings.filter((booking) => booking.state === state) }));
@@ -234,12 +217,10 @@ export function BookingsPage() {
             </div>
 
             <section className="panel-block">
-              <div className="panel-block-head"><div><h3>Money breakdown</h3><p>Rental fee plus delivery, cleaning and tax.</p></div></div>
+              <div className="panel-block-head"><div><h3>Money breakdown</h3><p>Rental fee, platform commission and security deposit from the API.</p></div></div>
               <div className="money-ledger">
                 <div><span>Rental fee · {active.days} days</span><strong>{money(active.rentalFee)}</strong></div>
-                <div><span>Delivery & return</span><strong>{money(active.deliveryFee)}</strong></div>
-                <div><span>Cleaning</span><strong>{money(active.cleaningFee)}</strong></div>
-                <div><span>Tax (8.25%)</span><strong>{money(active.tax)}</strong></div>
+                <div><span>Platform commission</span><strong>{money(active.tax)}</strong></div>
                 <div className="money-total"><span>Charged to renter</span><strong>{money(active.total)}</strong></div>
                 <div className="money-deposit">
                   <span>Security deposit · {active.depositState === "none" ? "not held yet" : depositLabel(active.depositState)}</span>
@@ -317,10 +298,9 @@ export function BookingsPage() {
                     </div>
                   ))}
                 </div>
-              ) : <p className="hint">No notes yet. Add the first one below.</p>}
-              <div className="note-composer">
-                <textarea className="textarea" value={note} onChange={(event) => setNote(event.target.value)} placeholder="Add a note visible to every operator…" />
-                <Button size="sm" variant="primary" loading={busy === "note"} disabled={note.trim().length < 3} onClick={() => void addNote()}>Add note</Button>
+              ) : <p className="hint">No notes on this booking yet.</p>}
+              <div className="note-composer" style={{ alignItems: "center" }}>
+                <p className="hint">Writing booking notes is not available in the API yet — notes are read-only here.</p>
               </div>
             </section>
           </div>

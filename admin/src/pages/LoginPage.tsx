@@ -1,43 +1,59 @@
 import { useState, type FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
-import { ArrowRight, LockKeyhole, Sparkles } from "lucide-react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { ArrowRight, Eye, EyeOff, LockKeyhole, Sparkles } from "lucide-react";
 import { BrandLogo } from "../components/BrandLogo";
 import { Button, Field } from "../components/ui";
 import { useAuth } from "../context/AuthContext";
 import { ApiError } from "../lib/api";
 
+const USERNAME_PATTERN = /^[a-z0-9._-]{3,32}$/;
 const DEMO = [
-  { role: "admin", label: "Admin", email: "admin@fabulouscartz.com", password: "Admin#2026" },
-  { role: "manager", label: "Manager", email: "manager@fabulouscartz.com", password: "Manager#2026" },
-  { role: "fulfilment", label: "Fulfilment", email: "fulfilment@fabulouscartz.com", password: "Fulfil#2026" },
+  { role: "admin", label: "Admin", username: "admin", password: "Admin#2026" },
+  { role: "manager", label: "Manager", username: "manager", password: "Manager#2026" },
+  { role: "fulfilment", label: "Fulfilment", username: "fulfilment", password: "Fulfil#2026" },
 ];
 
 export function LoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
-  const [email, setEmail] = useState("admin@fabulouscartz.com");
-  const [password, setPassword] = useState("Admin#2026");
+  const location = useLocation();
+  const from = (location.state as { from?: string } | null)?.from;
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<{ username?: string; password?: string }>({});
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  const validate = () => {
+    const next: { username?: string; password?: string } = {};
+    const handle = username.trim().toLowerCase();
+    if (!handle) next.username = "Username is required.";
+    else if (!USERNAME_PATTERN.test(handle)) {
+      next.username = "Use 3–32 characters: letters, numbers, dot, underscore or dash.";
+    }
+    if (!password) next.password = "Password is required.";
+    setFieldErrors(next);
+    return Object.keys(next).length === 0;
+  };
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     setError(null);
+    if (!validate()) return;
     setLoading(true);
     try {
-      await login(email, password);
-      navigate("/", { replace: true });
+      await login(username.trim().toLowerCase(), password);
+      navigate(from && !from.startsWith("/login") ? from : "/", { replace: true });
     } catch (cause) {
-      setError(cause instanceof ApiError ? cause.message : "Could not reach the operations API. Is the server running on port 4000?");
+      setError(
+        cause instanceof ApiError
+          ? cause.message
+          : "Could not reach the operations API. Is the server running on port 4000?",
+      );
     } finally {
       setLoading(false);
     }
-  };
-
-  const quickFill = (account: (typeof DEMO)[number]) => {
-    setEmail(account.email);
-    setPassword(account.password);
-    setError(null);
   };
 
   return (
@@ -82,34 +98,53 @@ export function LoginPage() {
           <header className="login-card-head">
             <p className="eyebrow">Operations console</p>
             <h2>Welcome back</h2>
-            <p>Sign in with your team account. Access is scoped by role and every change is audited.</p>
+            <p>Sign in with your team username. Access is scoped by role and every change is audited.</p>
           </header>
 
-          <form className="login-form" onSubmit={submit}>
-            <Field label="Work email" required>
+          <form className="login-form" onSubmit={submit} noValidate>
+            <Field label="Username" required>
               <input
                 className="input"
-                type="email"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
+                type="text"
+                value={username}
+                onChange={(event) => setUsername(event.target.value)}
                 autoComplete="username"
-                placeholder="you@fabulouscartz.com"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+                placeholder="e.g. admin"
+                aria-invalid={Boolean(fieldErrors.username)}
                 autoFocus
               />
+              {fieldErrors.username ? <span className="login-error">{fieldErrors.username}</span> : null}
             </Field>
             <Field label="Password" required hint="Sessions last 12 hours. Use the account menu to rotate your password.">
-              <input
-                className="input"
-                type="password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                autoComplete="current-password"
-                placeholder="••••••••••"
-              />
+              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <input
+                  className="input"
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  autoComplete="current-password"
+                  placeholder="••••••••••"
+                  aria-invalid={Boolean(fieldErrors.password)}
+                  style={{ flex: 1 }}
+                />
+                <button
+                  type="button"
+                  className="demo-btn"
+                  onClick={() => setShowPassword((value) => !value)}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  aria-pressed={showPassword}
+                >
+                  {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                </button>
+              </div>
+              {fieldErrors.password ? <span className="login-error">{fieldErrors.password}</span> : null}
             </Field>
 
             {error ? (
-              <p className="login-error">
+              <p className="login-error" role="alert">
                 <LockKeyhole size={13} style={{ marginTop: 1, flexShrink: 0 }} />
                 {error}
               </p>
@@ -121,18 +156,16 @@ export function LoginPage() {
           </form>
 
           <div className="login-demo">
-            <span>Seeded demo accounts</span>
-            <div className="demo-row">
+            <span>Demo credentials</span>
+            <p className="hint" style={{ marginTop: 8 }}>
               {DEMO.map((account) => (
-                <button key={account.role} type="button" className="demo-btn" data-role={account.role} onClick={() => quickFill(account)}>
-                  <i>{account.label.slice(0, 2)}</i>
-                  {account.label}
-                </button>
+                <span key={account.role} className="mono" style={{ display: "block", marginBottom: 4 }}>
+                  {account.label}: {account.username} / {account.password}
+                </span>
               ))}
-            </div>
+            </p>
             <p className="hint" style={{ marginTop: 10 }}>
-              Clicking a role fills the credentials. Passwords follow the seeded pattern and are listed in
-              <span className="mono"> admin/README.md</span>.
+              Usernames are case-insensitive. Accounts are seeded by <span className="mono">npm run seed</span>.
             </p>
           </div>
 

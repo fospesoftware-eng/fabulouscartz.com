@@ -11,7 +11,7 @@
     "seed": "npm --prefix server run seed",
     "setup": "npm install && npm --prefix server install",
     "shoot": "node scripts/shoot.mjs",
-    "test": "node scripts/test-api.mjs"
+    "test": "../backend/node_modules/.bin/tsx scripts/test-geo.ts && node scripts/test-api.mjs"
   },
   "dependencies": {
     "d3-geo": "^3.1.2",

@@ -1,12 +1,12 @@
-import { useEffect, useState } from "react";
-import { Bell, BellRing, CheckCheck, Package, ShoppingBag, Sparkles, UserPlus } from "lucide-react";
+import { useEffect } from "react";
+import { Bell, BellRing, Package, ShoppingBag, Sparkles, UserPlus } from "lucide-react";
 import type { Notification } from "../../shared/types";
-import { api } from "../lib/api";
+import { resources } from "../lib/normalize";
 import { useResource } from "../lib/hooks";
 import { relative } from "../lib/utils";
 import { useUI } from "../context/UIContext";
 import { Drawer } from "./overlay";
-import { Button, EmptyState, ErrorState, TableSkeleton } from "./ui";
+import { EmptyState, ErrorState, TableSkeleton } from "./ui";
 import { useNavigate } from "react-router-dom";
 
 const kindIcon = {
@@ -17,15 +17,14 @@ const kindIcon = {
 };
 
 export function useNotifications() {
-  const resource = useResource<{ data: Notification[]; unread: number }>(() => api.get("/notifications"), []);
+  const resource = useResource<{ data: Notification[]; unread: number }>(() => resources.notifications(), []);
   return resource;
 }
 
 export function NotificationsDrawer() {
-  const { notificationsOpen, setNotificationsOpen, notify } = useUI();
+  const { notificationsOpen, setNotificationsOpen } = useUI();
   const navigate = useNavigate();
   const { data, loading, error, reload } = useNotifications();
-  const [marking, setMarking] = useState(false);
 
   useEffect(() => {
     if (!notificationsOpen) return;
@@ -33,29 +32,7 @@ export function NotificationsDrawer() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [notificationsOpen]);
 
-  const markAll = async () => {
-    setMarking(true);
-    try {
-      await api.post("/notifications/read-all");
-      await reload();
-      window.dispatchEvent(new CustomEvent("fc:notifications-changed"));
-      notify({ kind: "success", title: "Notifications cleared", description: "Everything is marked as read." });
-    } catch {
-      notify({ kind: "error", title: "Could not mark notifications", description: "Please try again." });
-    } finally {
-      setMarking(false);
-    }
-  };
-
   const openNotification = async (entry: Notification) => {
-    if (!entry.read) {
-      try {
-        await api.patch(`/notifications/${entry.id}/read`);
-        window.dispatchEvent(new CustomEvent("fc:notifications-changed"));
-      } catch {
-        /* non-blocking */
-      }
-    }
     setNotificationsOpen(false);
     navigate(entry.href);
   };
@@ -66,13 +43,8 @@ export function NotificationsDrawer() {
       onClose={() => setNotificationsOpen(false)}
       eyebrow="Signals"
       title="Notification desk"
-      subtitle={`${data?.unread ?? 0} unread · orders, stock and customer signals`}
+      subtitle={`${data?.unread ?? 0} unsent · email dispatch log from the API`}
       width={430}
-      actions={
-        <Button variant="ghost" size="sm" icon={<CheckCheck size={14} />} loading={marking} onClick={markAll} disabled={!data?.unread}>
-          Mark all
-        </Button>
-      }
     >
       {loading ? (
         <TableSkeleton rows={5} cols={1} />

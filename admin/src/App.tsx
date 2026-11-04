@@ -28,10 +28,30 @@ import { SellersPage } from "./pages/SellersPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { VendorsPage } from "./pages/VendorsPage";
 
+function RequireSession({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
+  const location = useLocation();
+  if (!user) {
+    return <Navigate to="/login" state={{ from: routeRelative(location) }} replace />;
+  }
+  return <>{children}</>;
+}
+
+/** Strip the /backoffice base so router targets never double-prefix it. */
+function routeRelative(location: { pathname: string; search: string }): string {
+  const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+  const pathname = location.pathname.startsWith(base)
+    ? location.pathname.slice(base.length) || "/"
+    : location.pathname;
+  return `${pathname}${location.search}`;
+}
+
 function Guard({ roles, children }: { roles: Role[]; children: ReactNode }) {
   const { user } = useAuth();
   const location = useLocation();
-  if (!user) return <Navigate to="/login" replace />;
+  if (!user) {
+    return <Navigate to="/login" state={{ from: routeRelative(location) }} replace />;
+  }
   if (!roles.includes(user.role)) {
     return (
       <div className="card card-pad">
@@ -40,7 +60,7 @@ function Guard({ roles, children }: { roles: Role[]; children: ReactNode }) {
           title="Restricted workspace"
           body={`Your ${user.role} role cannot open ${location.pathname}. Ask an admin if you need access.`}
           action={
-            <Button variant="outline" onClick={() => { window.location.href = "/"; }}>
+            <Button variant="outline" onClick={() => { window.location.href = import.meta.env.BASE_URL; }}>
               Back to dashboard
             </Button>
           }
@@ -66,7 +86,7 @@ export function App() {
   return (
     <Routes>
       <Route path="/login" element={user ? <Navigate to="/" replace /> : <LoginPage />} />
-      <Route element={user ? <Shell /> : <Navigate to="/login" replace />}>
+      <Route element={<RequireSession><Shell /></RequireSession>}>
         <Route index element={<DashboardPage />} />
         <Route path="orders" element={<OrdersPage />} />
         <Route path="products" element={<ProductsPage />} />
@@ -88,6 +108,14 @@ export function App() {
         <Route path="deposits" element={<DepositsPage />} />
         <Route path="overdue" element={<OverduePage />} />
         <Route path="disputes" element={<DisputesPage />} />
+        {/* Namespaced aliases so external deep links such as
+            /backoffice/rentals/bookings resolve to the same screens. */}
+        <Route path="rentals/listings" element={<ListingsPage />} />
+        <Route path="rentals/bookings" element={<BookingsPage />} />
+        <Route path="rentals/calendar" element={<CalendarPage />} />
+        <Route path="rentals/deposits" element={<DepositsPage />} />
+        <Route path="rentals/overdue" element={<OverduePage />} />
+        <Route path="rentals/disputes" element={<DisputesPage />} />
         <Route path="settings" element={<Guard roles={["admin"]}><SettingsPage /></Guard>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
