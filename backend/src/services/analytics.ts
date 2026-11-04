@@ -1,4 +1,5 @@
 import { prisma } from "../db.js";
+import { US_STATES, normalizeUsState } from "../lib/us-states.js";
 
 export type PaidStatus = "paid" | "confirmed" | "shipped" | "delivered";
 const PAID_STATUSES: PaidStatus[] = ["paid", "confirmed", "shipped", "delivered"];
@@ -386,10 +387,178 @@ export async function getSellerAnalytics(range: DateRange) {
 }
 
 // ---------------------------------------------------------------------------
-// Rental analytics
+// Geographic analytics
 // ---------------------------------------------------------------------------
 
-const RENTAL_REVENUE_STATUSES = ["dispatched", "in_use", "return_due", "overdue", "returned", "inspection", "completed", "disputed"];
+export type GeoMetric = "orders" | "revenue" | "bookings";
+export type GeoInclude = "orders" | "bookings";
+
+export interface GeoRow {
+  stateCode: string;
+  stateName: string;
+  orderCount: number;
+  orderRevenueMinor: number;
+  bookingCount: number;
+  bookingRevenueMinor: number;
+}
+
+export interface GeoExclusions {
+  nonUsOrders: number;
+  unknownStateOrders: number;
+  nonUsBookings: number;
+  unknownStateBookings: number;
+}
+
+const RENTAL_REVENUE_STATUSES = [
+  "dispatched",
+  "in_use",
+  "return_due",
+  "overdue",
+  "returned",
+  "inspection",
+  "completed",
+  "disputed",
+];
+
+function isUsCountry(country: string | null | undefined): boolean {
+  return (country ?? "").trim().toUpperCase() === "US";
+}
+
+export async function getGeoAnalytics(
+  range: DateRange,
+  metric: GeoMetric,
+  include: GeoInclude[],
+) {
+  const wantsOrders = include.includes("orders");
+  const wantsBookings = include.includes("bookings");
+
+  const [orders, bookings] = await Promise.all([
+    wantsOrders
+      ? prisma.order.findMany({
+          where: { placedAt: rangeWhere(range) },
+          select: {
+            status: true,
+            totalMinor: true,
+            shippingAddress: { select: { country: true, state: true } },
+          },
+        })
+      : Promise.resolve([]),
+    wantsBookings
+      ? prisma.booking.findMany({
+          where: { createdAt: rangeWhere(range) },
+          select: { status: true, rentalFeeMinor: true, country: true, state: true },
+        })
+      : Promise.resolve([]),
+  ]);
+
+  const rows = new Map<string, GeoRow>();
+  const exclusions: GeoExclusions = {
+    nonUsOrders: 0,
+    unknownStateOrders: 0,
+    nonUsBookings: 0,
+    unknownStateBookings: 0,
+  };
+
+  const ensureRow = (stateCode: string): GeoRow => {
+    const existing = rows.get(stateCode);
+    if (existing) return existing;
+    const row: GeoRow = {
+      stateCode,
+      stateName: US_STATES[stateCode] ?? stateCode,
+      orderCount: 0,
+      orderRevenueMinor: 0,
+      bookingCount: 0,
+      bookingRevenueMinor: 0,
+    };
+    rows.set(stateCode, row);
+    return row;
+  };
+
+  for (const order of orders) {
+    const address = order.shippingAddress;
+    if (!address || !isUsCountry(address.country)) {
+      exclusions.nonUsOrders += 1;
+      continue;
+    }
+    const stateCode = normalizeUsState(address.state);
+    if (!stateCode) {
+      exclusions.unknownStateOrders += 1;
+      continue;
+    }
+    const row = ensureRow(stateCode);
+    row.orderCount += 1;
+    // Revenue follows the same "paid" definition as the rest of the analytics.
+    if (PAID_STATUSES.includes(order.status as PaidStatus)) {
+      row.orderRevenueMinor += order.totalMinor;
+    }
+  }
+
+  for (const booking of bookings) {
+    if (!isUsCountry(booking.country)) {
+      exclusions.nonUsBookings += 1;
+      continue;
+    }
+    const stateCode = normalizeUsState(booking.state);
+    if (!stateCode) {
+      exclusions.unknownStateBookings += 1;
+      continue;
+    }
+    const row = ensureRow(stateCode);
+    row.bookingCount += 1;
+    if (RENTAL_REVENUE_STATUSES.includes(booking.status)) {
+      row.bookingRevenueMinor += booking.rentalFeeMinor;
+    }
+  }
+
+  const metricValue = (row: GeoRow): number => {
+    switch (metric) {
+      case "revenue":
+        return row.orderRevenueMinor + row.bookingRevenueMinor;
+      case "bookings":
+        return row.bookingCount;
+      default:
+        return row.orderCount;
+    }
+  };
+
+  const data = [...rows.values()].sort(
+    (a, b) =>
+      b.orderCount + b.bookingCount - (a.orderCount + a.bookingCount) ||
+      a.stateCode.localeCompare(b.stateCode),
+  );
+
+  const ranking = [...data]
+    .map((row) => ({ stateCode: row.stateCode, stateName: row.stateName, value: metricValue(row) }))
+    .filter((entry) => entry.value > 0)
+    .sort((a, b) => b.value - a.value || a.stateCode.localeCompare(b.stateCode))
+    .slice(0, 10);
+
+  const totals = data.reduce(
+    (acc, row) => ({
+      orderCount: acc.orderCount + row.orderCount,
+      orderRevenueMinor: acc.orderRevenueMinor + row.orderRevenueMinor,
+      bookingCount: acc.bookingCount + row.bookingCount,
+      bookingRevenueMinor: acc.bookingRevenueMinor + row.bookingRevenueMinor,
+    }),
+    { orderCount: 0, orderRevenueMinor: 0, bookingCount: 0, bookingRevenueMinor: 0 },
+  );
+
+  return {
+    data,
+    meta: {
+      metric,
+      include,
+      range: { from: range.from.toISOString(), to: range.to.toISOString() },
+      totals: { ...totals, states: data.length },
+      ranking,
+      excluded: exclusions,
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Rental analytics
+// ---------------------------------------------------------------------------
 
 export async function getRentalAnalytics(range: DateRange) {
   const [bookings, listings, deposits, disputes] = await Promise.all([

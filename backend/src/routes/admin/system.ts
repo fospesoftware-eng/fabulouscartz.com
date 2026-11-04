@@ -20,6 +20,7 @@ import {
   exportCsv,
   getCategoryMix,
   getFunnel,
+  getGeoAnalytics,
   getLowStock,
   getRevenueSeries,
   getSummary,
@@ -28,6 +29,34 @@ import {
 import { staffActor } from "./catalog.js";
 
 const rangeSchema = z.object({ from: z.coerce.date().optional(), to: z.coerce.date().optional() });
+
+const geoIncludeSchema = z
+  .union([z.string(), z.array(z.string())])
+  .optional()
+  .transform((value) => {
+    const raw = value === undefined ? "orders,bookings" : Array.isArray(value) ? value.join(",") : value;
+    return Array.from(
+      new Set(
+        raw
+          .split(",")
+          .map((part) => part.trim().toLowerCase())
+          .filter(Boolean),
+      ),
+    );
+  })
+  .pipe(z.array(z.enum(["orders", "bookings"])).min(1).max(2));
+
+const geoQuerySchema = z
+  .object({
+    metric: z.enum(["orders", "revenue", "bookings"]).default("orders"),
+    from: z.coerce.date().optional(),
+    to: z.coerce.date().optional(),
+    include: geoIncludeSchema,
+  })
+  .refine((value) => !value.from || !value.to || value.from.getTime() <= value.to.getTime(), {
+    message: "`from` must be on or before `to`",
+    path: ["from"],
+  });
 
 function rangeOf(query: z.infer<typeof rangeSchema>) {
   return defaultRange(query.from, query.to);
@@ -134,6 +163,43 @@ export async function adminSystemRoutes(app: FastifyInstance): Promise<void> {
       await staffActor(request, ["admin", "manager"]);
       const query = parse(rangeSchema, request.query);
       return reply.send({ data: await getRevenueSeries(rangeOf(query)) });
+    },
+  );
+
+  app.get(
+    "/analytics/geo",
+    {
+      schema: {
+        tags: ["Admin · Analytics"],
+        summary: "Per-state order and booking aggregation (US map)",
+        description:
+          "Aggregates orders by shipping-address state and rentals by booking state. Rows always " +
+          "carry both datasets; `include` limits which datasets are read. Non-US addresses are " +
+          "excluded and counted in `meta.excluded`. `meta.ranking` lists the top states by `metric`.",
+        querystring: {
+          type: "object",
+          properties: {
+            metric: {
+              type: "string",
+              enum: ["orders", "revenue", "bookings"],
+              default: "orders",
+              description: "Ranking metric for meta.ranking (rows always carry both datasets)",
+            },
+            from: { type: "string", description: "Inclusive ISO date/time lower bound" },
+            to: { type: "string", description: "Inclusive ISO date/time upper bound" },
+            include: {
+              type: "string",
+              default: "orders,bookings",
+              description: "Comma-separated datasets to read: orders, bookings, or orders,bookings",
+            },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      await staffActor(request, ["admin", "manager"]);
+      const query = parse(geoQuerySchema, request.query);
+      return reply.send(await getGeoAnalytics(rangeOf(query), query.metric, query.include));
     },
   );
 

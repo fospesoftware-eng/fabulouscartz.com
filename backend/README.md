@@ -105,7 +105,7 @@ build. If it is absent, `/backoffice` returns `503 CONSOLE_NOT_BUILT` instead of
 - API base in the console: `VITE_API_BASE` (default `/backoffice/api/v1`); marketplace screens use `VITE_MARKETPLACE_BASE` (default `${VITE_API_BASE}/admin`).
 - The alias is a request-URL rewrite (`/backoffice/api` → `/api`), not a second
   route registration. `/backoffice/api/v1/...` therefore runs the exact same
-  handlers as `/api/v1/...`, and the generated OpenAPI stays canonical with 137
+  handlers as `/api/v1/...`, and the generated OpenAPI stays canonical with 138
   paths relative to the `/api/v1` server (no duplicated `/backoffice` tree).
 - Console deep links also accept the `rentals/` namespace
   (`/backoffice/rentals/bookings`, `/backoffice/rentals/listings`, …), which map
@@ -167,7 +167,9 @@ Validation errors list the specific rule that failed; login errors stay generic.
 
 Coupons: `FESTIVE20` (20% off, min $40), `WELCOME10` (10%, min $25), `DANCE15` (15%, dance costumes only), `BRIDAL25`, `FREESHIP`, `JEWEL12`, `DIWALI18` (expired), `KIDS10` (kids wear only).
 
-Seed volume: 6 categories, 11 vendors, **10 marketplace sellers** (6 KYC-approved, 2 pending, 1 rejected, 1 suspended) with 28 KYC documents and 3 onboarding requests, 21 products (19 active, 1 draft, 1 archived) / 51 SKUs — every product is attributed to a seller — 60 orders, 356 reviews, 8 coupons, 3 banners, 3 posts, 18 wishlist rows, 5 low-stock SKUs, **60 payouts** backed by **140 seller ledger entries** (6 monthly periods per seller, mixing paid/pending/failed plus unpaid balances for previews), **25 P2P rental listings** (active, pending-review, draft and suspended), **40 bookings** across 13 statuses (in_use, overdue, returned-pending-inspection, completed and disputed all represented) with US state distribution and 229 booking events, **40 rental deposits**, **49 deposit ledger entries**, **6 inspection reports** and **3 disputes** (open plus one resolved). Rental cities/states are spread across the US (CA, NY, TX, FL, WA, IL, GA, AZ, CO, MA) so the console map renders.
+Seed volume: 6 categories, 11 vendors, **10 marketplace sellers** (6 KYC-approved, 2 pending, 1 rejected, 1 suspended) with 28 KYC documents and 3 onboarding requests, 21 products (19 active, 1 draft, 1 archived) / 51 SKUs — every product is attributed to a seller — 60 orders, 356 reviews, 8 coupons, 3 banners, 3 posts, 18 wishlist rows, 5 low-stock SKUs, **60 payouts** backed by **140 seller ledger entries** (6 monthly periods per seller, mixing paid/pending/failed plus unpaid balances for previews), **25 P2P rental listings** (active, pending-review, draft and suspended), **40 bookings** across 13 statuses (in_use, overdue, returned-pending-inspection, completed and disputed all represented) with US state distribution and 229 booking events, **40 rental deposits**, **49 deposit ledger entries**, **6 inspection reports** and **3 disputes** (open plus one resolved). Rental cities/states are spread across the US (CA, NY, TX, FL, WA, IL, GA, AZ, CO, MA, NJ, NC, MI, OH, PA, OR, TN, VA, UT, MN) so the console map renders.
+
+Order addresses are deliberately mixed: **40 of 60 orders ship to weighted US destinations** (CA, NY and TX lead, plus FL, WA, IL, GA, AZ, CO, MA, NJ, PA, OH and NC) and the remaining **20 stay non-US (IN)**. Rental states such as **MI, OR, TN, VA, UT and MN** have rentals but no orders, so the order and booking layers are visibly different in the geo endpoint.
 
 Seed counts drift slightly as you exercise the API.
 
@@ -390,6 +392,60 @@ All figures are computed from real orders (`paid`, `confirmed`, `shipped`, `deli
 - `GET /admin/analytics/export.csv?dataset=orders|products|low-stock|customers` — streamed CSV with proper headers
 - `GET /admin/analytics/sellers`, `/sellers/top`, `/sellers/payout-due` — marketplace GMV, commission, refunds, net, order counts, ratings and payout liability
 - `GET /admin/analytics/rentals`, `/rentals/states` — rental GMV, platform fees, owner payouts, deposit ledger, overdue/dispute counts and booking distribution by US state (feeds the console map)
+- `GET /admin/analytics/geo` — combined **orders + rentals** per US state for the admin map (admin/manager only)
+
+### Geographic analytics (`GET /admin/analytics/geo`)
+
+Query parameters:
+
+| Param | Values | Default | Notes |
+| --- | --- | --- | --- |
+| `metric` | `orders` \| `revenue` \| `bookings` | `orders` | Selects the ranking in `meta.ranking` (`revenue` = order + booking revenue); rows always carry both datasets |
+| `from` / `to` | ISO date/time | last 12 months | Inclusive; orders filter on `placedAt`, bookings on `createdAt` |
+| `include` | `orders`, `bookings`, `orders,bookings` | `orders,bookings` | Limits which datasets are read into rows |
+
+Response `{ data, meta }`:
+
+```json
+{
+  "data": [
+    {
+      "stateCode": "CA",
+      "stateName": "California",
+      "orderCount": 10,
+      "orderRevenueMinor": 68808,
+      "bookingCount": 2,
+      "bookingRevenueMinor": 38500
+    }
+  ],
+  "meta": {
+    "metric": "orders",
+    "include": ["orders", "bookings"],
+    "range": { "from": "2025-11-04T03:09:47.434Z", "to": "2026-11-04T03:09:47.434Z" },
+    "totals": {
+      "states": 19,
+      "orderCount": 40,
+      "orderRevenueMinor": 375956,
+      "bookingCount": 32,
+      "bookingRevenueMinor": 936650
+    },
+    "ranking": [{ "stateCode": "CA", "stateName": "California", "value": 10 }],
+    "excluded": {
+      "nonUsOrders": 20,
+      "unknownStateOrders": 0,
+      "nonUsBookings": 0,
+      "unknownStateBookings": 0
+    }
+  }
+}
+```
+
+- Only states with data in the selected datasets appear. USPS two-letter codes and full state names are accepted on the address side and normalised; unrecognised states are excluded and counted.
+- `meta.ranking` is the top 10 states by the chosen metric, descending, with zero-value states omitted.
+- `orderCount` counts US orders in the window; `orderRevenueMinor` sums only `paid | confirmed | shipped | delivered` orders. `bookingCount` counts all bookings; `bookingRevenueMinor` sums realised rental fees (dispatched through completed/disputed).
+- **Mixed addresses:** non-US shipping addresses are excluded from rows and reported in `meta.excluded.nonUsOrders`; non-US booking countries in `meta.excluded.nonUsBookings`. Nothing is silently dropped.
+- Empty windows return `{ "data": [], "meta": { ... zeros ... } }` — clients should render the "no data for this period" state rather than an error.
+- RBAC: Admin and Manager only; Fulfilment and Customer get **403**.
 
 ## Notifications
 
@@ -550,6 +606,7 @@ Base path `/api/v1`. `public` = no token, `customer` = bearer customer, `staff` 
 | GET | `/admin/analytics/category-mix` | Admin/Manager |
 | GET | `/admin/analytics/top-products` | Admin/Manager |
 | GET | `/admin/analytics/low-stock` | staff |
+| GET | `/admin/analytics/geo` | Admin/Manager |
 | GET | `/admin/analytics/export.csv` | Admin/Manager |
 | GET | `/admin/settings` | Admin/Manager |
 | PATCH | `/admin/settings/:section` | Admin/Manager |
@@ -670,8 +727,9 @@ Coverage:
 | `tests/webhook.test.ts` | invalid signature 401, signed success settles once, duplicate eventId is not reprocessed, failed payment does not settle |
 | `tests/marketplace.test.ts` | overlapping rental booking rejected 409 (adjacent start allowed), illegal booking transition 409 with `allowedTransitions`, deposit capture above authorized 409, deposit release idempotency (single release ledger row), per-seller commission + payout preview/generate/mark-paid math, Fulfilment 403 on payout money endpoints but allowed dispatch/inspection transitions, suspended seller blocked from publishing new listings, public sellers exclude suspended/rejected |
 | `tests/auth-username.test.ts` | username login (no password hash in payload), email fallback and `/backoffice/api/v1` alias, case-insensitive match, identical generic error for wrong password vs unknown user, refresh rotation + reuse rejection, lockout 429 after 5 failures with `retryAfterSeconds`, password-policy rejection (length/number/symbol) on register and admin reset |
+| `tests/analytics-geo.test.ts` | per-state rows carry both datasets with totals/exclusions and USPS codes, metric switch changes the ranking, explicit date window is applied and echoed, manager 200 vs fulfilment/customer 403, empty-state shape, `/backoffice/api/v1` alias with `include=bookings` |
 
-Result: **7 files / 46 tests passing** (39 pre-existing + 7 username/lockout/policy).
+Result: **8 files / 52 tests passing** (46 pre-existing + 6 geographic analytics).
 
 ---
 

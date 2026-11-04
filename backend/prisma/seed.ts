@@ -599,8 +599,49 @@ async function main(): Promise<void> {
     ...Array(4).fill("cancelled"),
     ...Array(3).fill("refunded"),
   ];
+  // Weighted US destinations: roughly correlated with real population/order
+  // volume. Orders are mixed with non-US addresses so geographic analytics can
+  // report exclusions honestly. Some rental-only states (MI, OR, TN, VA, UT, MN)
+  // are intentionally absent here.
+  const ORDER_US_STATES: Array<{ code: string; city: string; postalCode: string }> = [
+    { code: "CA", city: "San Francisco", postalCode: "94107" },
+    { code: "CA", city: "Los Angeles", postalCode: "90012" },
+    { code: "CA", city: "San Diego", postalCode: "92101" },
+    { code: "CA", city: "San Jose", postalCode: "95113" },
+    { code: "CA", city: "Sacramento", postalCode: "95814" },
+    { code: "NY", city: "New York", postalCode: "10001" },
+    { code: "NY", city: "Brooklyn", postalCode: "11201" },
+    { code: "NY", city: "Buffalo", postalCode: "14202" },
+    { code: "NY", city: "Rochester", postalCode: "14604" },
+    { code: "TX", city: "Austin", postalCode: "78701" },
+    { code: "TX", city: "Houston", postalCode: "77002" },
+    { code: "TX", city: "Dallas", postalCode: "75201" },
+    { code: "TX", city: "San Antonio", postalCode: "78205" },
+    { code: "FL", city: "Miami", postalCode: "33101" },
+    { code: "FL", city: "Orlando", postalCode: "32801" },
+    { code: "FL", city: "Tampa", postalCode: "33602" },
+    { code: "WA", city: "Seattle", postalCode: "98101" },
+    { code: "WA", city: "Spokane", postalCode: "99201" },
+    { code: "IL", city: "Chicago", postalCode: "60601" },
+    { code: "IL", city: "Springfield", postalCode: "62701" },
+    { code: "GA", city: "Atlanta", postalCode: "30303" },
+    { code: "GA", city: "Savannah", postalCode: "31401" },
+    { code: "AZ", city: "Phoenix", postalCode: "85004" },
+    { code: "CO", city: "Denver", postalCode: "80202" },
+    { code: "MA", city: "Boston", postalCode: "02108" },
+    { code: "NJ", city: "Newark", postalCode: "07102" },
+    { code: "NJ", city: "Jersey City", postalCode: "07302" },
+    { code: "PA", city: "Philadelphia", postalCode: "19103" },
+    { code: "OH", city: "Columbus", postalCode: "43201" },
+    { code: "NC", city: "Raleigh", postalCode: "27601" },
+  ];
+  const US_STREETS = ["Market Street", "Main Street", "Oak Avenue", "Cedar Lane", "Maple Drive", "Pine Street"];
+  const IN_CITIES = ["Kochi", "Chennai", "Bengaluru", "Mumbai", "Thrissur"];
+  const IN_STATES = ["Kerala", "Tamil Nadu", "Karnataka", "Maharashtra", "Kerala"];
+
   const activeProducts = PRODUCTS.filter((product) => product.status === "active");
   let orderSeq = 1000;
+  let usOrderSeq = 0;
   const seededOrderIds: string[] = [];
 
   for (const [index, status] of statuses.entries()) {
@@ -630,6 +671,10 @@ async function main(): Promise<void> {
 
     const guestOrder = buyerRandom() < 0.15;
     const itemCount = 1 + Math.floor(buyerRandom() * 3);
+    // Two of every three orders ship to the US; the rest stay non-US so the
+    // geo endpoint can demonstrate excluded-address reporting.
+    const isUsOrder = index % 3 !== 2;
+    const usAddress = isUsOrder ? ORDER_US_STATES[usOrderSeq++ % ORDER_US_STATES.length] : null;
 
     interface Line { productId: string; variantId: string; title: string; sku: string; mode: "buy" | "rent"; quantity: number; unitPriceMinor: number; lineTotalMinor: number; rentalStart: Date | null; rentalEnd: Date | null; rentalDays: number | null; depositMinor: number }
     const lines: Line[] = [];
@@ -745,12 +790,14 @@ async function main(): Promise<void> {
             id: `${orderId}_addr`,
             userId: guestOrder ? null : customer.id,
             recipient: customer.name,
-            line1: `${100 + index} Lake View Road`,
-            city: ["Kochi", "Chennai", "Bengaluru", "Mumbai", "Thrissur"][index % 5],
-            state: ["Kerala", "Tamil Nadu", "Karnataka", "Maharashtra", "Kerala"][index % 5],
-            postalCode: `${682001 + index}`,
-            country: "IN",
-            phone: customer.phone,
+            line1: usAddress
+              ? `${120 + index} ${US_STREETS[index % US_STREETS.length]}`
+              : `${100 + index} Lake View Road`,
+            city: usAddress ? usAddress.city : IN_CITIES[index % IN_CITIES.length],
+            state: usAddress ? usAddress.code : IN_STATES[index % IN_STATES.length],
+            postalCode: usAddress ? usAddress.postalCode : `${682001 + index}`,
+            country: usAddress ? "US" : "IN",
+            phone: usAddress ? `+1 555 01${String(index).padStart(2, "0")}` : customer.phone,
           },
         },
         payments: {
