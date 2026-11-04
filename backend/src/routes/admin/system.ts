@@ -11,6 +11,8 @@ import { pageArgs, pageSchema, paginated } from "../../lib/pagination.js";
 import { recordAudit } from "../../lib/audit.js";
 import { serializeUser } from "../../lib/serialize.js";
 import { hashPassword, revokeAllSessions } from "../../lib/auth.js";
+import { passwordSchema } from "../../lib/password.js";
+import { USERNAME_PATTERN, allocateUsername, usernameFromEmail } from "../../lib/username.js";
 import { getSettings, updateSection } from "../../services/settings.js";
 import { dispatchPending } from "../../services/notifications.js";
 import {
@@ -253,7 +255,7 @@ export async function adminSystemRoutes(app: FastifyInstance): Promise<void> {
           take,
           select: {
             id: true, email: true, firstName: true, lastName: true, role: true, phone: true,
-            title: true, isActive: true, createdAt: true, lastLoginAt: true,
+            title: true, isActive: true, createdAt: true, lastLoginAt: true, username: true,
           },
         }),
       ]);
@@ -269,7 +271,13 @@ export async function adminSystemRoutes(app: FastifyInstance): Promise<void> {
       const input = parse(
         z.object({
           email: z.string().email(),
-          password: z.string().min(8).max(128),
+          username: z
+            .string()
+            .trim()
+            .toLowerCase()
+            .regex(USERNAME_PATTERN, "Username must be 3–32 characters using letters, numbers, dot, underscore or dash")
+            .optional(),
+          password: passwordSchema,
           firstName: z.string().min(1).max(80),
           lastName: z.string().max(80).optional(),
           role: z.enum(["admin", "manager", "fulfilment"]),
@@ -281,10 +289,12 @@ export async function adminSystemRoutes(app: FastifyInstance): Promise<void> {
       const email = input.email.toLowerCase();
       const existing = await prisma.user.findUnique({ where: { email } });
       if (existing) throw conflict("An account with this email already exists");
+      const username = await allocateUsername(input.username ?? usernameFromEmail(email));
 
       const user = await prisma.user.create({
         data: {
           email,
+          username,
           passwordHash: await hashPassword(input.password),
           firstName: input.firstName,
           lastName: input.lastName ?? null,
@@ -350,7 +360,7 @@ export async function adminSystemRoutes(app: FastifyInstance): Promise<void> {
     async (request, reply) => {
       const actor = await staffActor(request, ["admin"]);
       const { id } = parse(z.object({ id: z.string().min(1) }), request.params);
-      const { newPassword } = parse(z.object({ newPassword: z.string().min(8).max(128) }), request.body);
+      const { newPassword } = parse(z.object({ newPassword: passwordSchema }), request.body);
       const user = await prisma.user.findUnique({ where: { id } });
       if (!user) throw notFound("User not found");
       await prisma.user.update({ where: { id }, data: { passwordHash: await hashPassword(newPassword) } });

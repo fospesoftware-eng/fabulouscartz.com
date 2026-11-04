@@ -8,6 +8,7 @@ import { pageArgs, pageSchema, paginated } from "../../lib/pagination.js";
 import { recordAudit } from "../../lib/audit.js";
 import { slugify } from "../../lib/slug.js";
 import { hashPassword } from "../../lib/auth.js";
+import { allocateUsername, usernameFromEmail } from "../../lib/username.js";
 import { SELLER_KYC_STATUSES, SELLER_STATUSES } from "../../lib/constants.js";
 import { staffActor } from "./catalog.js";
 import {
@@ -148,6 +149,7 @@ export async function adminSellerRoutes(app: FastifyInstance): Promise<void> {
           const created = await prisma.user.create({
             data: {
               email: input.ownerEmail!,
+              username: await allocateUsername(usernameFromEmail(input.ownerEmail!)),
               passwordHash: await hashPassword(crypto.randomBytes(18).toString("hex")),
               firstName: input.ownerName ?? input.storeName,
               role: "customer",
@@ -407,6 +409,7 @@ export async function adminSellerRoutes(app: FastifyInstance): Promise<void> {
         owner = await prisma.user.create({
           data: {
             email: requestRow.applicantEmail,
+            username: await allocateUsername(usernameFromEmail(requestRow.applicantEmail)),
             passwordHash: await hashPassword(crypto.randomBytes(18).toString("hex")),
             firstName: requestRow.applicantName,
             role: "customer",

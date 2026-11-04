@@ -21,6 +21,16 @@ cp .env.example .env        # defaults are ready for local dev
 npx prisma migrate deploy   # or: npm run migrate
 npm run seed                # catalogue + orders + 10 sellers + payouts + P2P rentals
 npm run dev                 # http://127.0.0.1:4000  (Swagger: /docs)
+
+# One-URL back office: builds ../admin, copies it into public/backoffice and serves it
+npm run build:backoffice    # admin build only (API server unchanged)
+npm run start:backoffice    # build admin + backend, then serve console + API on :4000
+```
+
+Admin console development (hot reload) stays a separate process:
+
+```bash
+cd ../admin && npm run dev  # http://localhost:5174/backoffice/ (proxies /backoffice/api to :4000)
 ```
 
 Production-style check:
@@ -45,10 +55,10 @@ curl -s localhost:4000/ready     # verifies DB connectivity with SELECT 1
 ### Example requests
 
 ```bash
-# Staff login
-curl -s -X POST localhost:4000/api/v1/auth/login \
+# Staff login (username is the documented path; email is a legacy fallback)
+curl -s -X POST localhost:4000/backoffice/api/v1/auth/login \
   -H 'content-type: application/json' \
-  -d '{"email":"admin@fabulouscartz.com","password":"Admin#2026"}'
+  -d '{"username":"admin","password":"Admin#2026"}'
 
 # Storefront catalogue
 curl -s 'localhost:4000/api/v1/products?category=handmade-jewelry&sort=price_asc&pageSize=5'
@@ -69,16 +79,91 @@ curl -s -X POST localhost:4000/api/v1/checkout -H "x-cart-token: $CT" \
 
 ---
 
+## Back-office console (one URL)
+
+The admin console and the API share one origin and one process. `/api/v1` stays
+untouched for existing clients; the same routes are also mounted under
+`/backoffice/api/v1`.
+
+| URL | What it is |
+| --- | --- |
+| `http://127.0.0.1:4000/backoffice` | 302 → `/backoffice/` |
+| `http://127.0.0.1:4000/backoffice/` | Console (SPA) |
+| `http://127.0.0.1:4000/backoffice/rentals/bookings` | Deep link — served by the SPA fallback, never 404 |
+| `http://127.0.0.1:4000/backoffice/api/v1/...` | API alias of `/api/v1/...` |
+| `http://127.0.0.1:4000/api/v1/...` | Historical API (backwards compatible) |
+| `http://127.0.0.1:4000/docs` | Swagger UI |
+| `http://127.0.0.1:4000/health` | Liveness |
+
+`ADMIN_CONSOLE_DIR` (default `./public/backoffice`) points at the copied console
+build. If it is absent, `/backoffice` returns `503 CONSOLE_NOT_BUILT` instead of
+404 so health checks can distinguish “API only” from “broken”.
+
+- Console build: `cd ../admin && npm run build` — Vite `base: "/backoffice/"`, router `basename: "/backoffice"`.
+- Copy + serve: `npm run build:backoffice` (builds `../admin`, copies `dist` into `public/backoffice`).
+- Combined start: `npm run start:backoffice` (admin build → backend `tsc` → `node dist/server.js`).
+- API base in the console: `VITE_API_BASE` (default `/backoffice/api/v1`); marketplace screens use `VITE_MARKETPLACE_BASE` (default `${VITE_API_BASE}/admin`).
+- The alias is a request-URL rewrite (`/backoffice/api` → `/api`), not a second
+  route registration. `/backoffice/api/v1/...` therefore runs the exact same
+  handlers as `/api/v1/...`, and the generated OpenAPI stays canonical with 137
+  paths relative to the `/api/v1` server (no duplicated `/backoffice` tree).
+- Console deep links also accept the `rentals/` namespace
+  (`/backoffice/rentals/bookings`, `/backoffice/rentals/listings`, …), which map
+  to the same screens as `/backoffice/bookings`, `/backoffice/listings`, ….
+
+---
+
 ## Seeded credentials
 
 `npm run seed` is deterministic (fixed clock `2026-11-03T10:20:00+05:30`), so order dates, ratings and stock are stable across restarts.
 
-| Role | Email | Password |
-| --- | --- | --- |
-| Admin | `admin@fabulouscartz.com` | `Admin#2026` |
-| Manager | `manager@fabulouscartz.com` | `Manager#2026` |
-| Fulfilment | `fulfilment@fabulouscartz.com` | `Fulfil#2026` |
-| Customer (30 of them) | e.g. `ananya.raghavan@example.com`, `diya.menon@example.com`, `meera.pillai@example.com` | `Customer#2026` |
+Login accepts `username` (documented) or `email` (legacy).
+
+| Role | Username | Email | Password |
+| --- | --- | --- | --- |
+| Admin | `admin` | `admin@fabulouscartz.com` | `Admin#2026` |
+| Manager | `manager` | `manager@fabulouscartz.com` | `Manager#2026` |
+| Fulfilment | `fulfilment` | `fulfilment@fabulouscartz.com` | `Fulfil#2026` |
+| Customer (30) | `ananya.raghavan`, `diya.menon`, `meera.pillai`, … (email local-part) | `ananya.raghavan@example.com`, … | `Customer#2026` |
+| Seller owner (10) | seller slug, e.g. `viya-crafts`, `omana-atelier`, `mercy-george-tailoring` | `seller1@fabulouscartz.com` … `seller10@fabulouscartz.com` | `Customer#2026` |
+
+Usernames are lowercase, 3–32 characters of letters/digits/dot/underscore/dash and
+case-insensitive at login. The `20261103133000_username_auth` migration backfills
+existing rows deterministically from the email local-part and appends `_2`, `_3`,
+… on collisions.
+
+### Login contract
+
+```http
+POST /backoffice/api/v1/auth/login     (alias: /api/v1/auth/login)
+{ "username": "admin", "password": "Admin#2026" }
+```
+
+- `username` is case-insensitive and trimmed. `email` remains supported as a
+  fallback (`{ "email": "admin@fabulouscartz.com", "password": "..." }`).
+- Success returns the same access/refresh token pair and the principal
+  (`id`, `username`, `email`, `role`, `firstName`/`lastName`, `title`). The
+  password hash is never serialized.
+- Failures are deliberately indistinguishable: unknown username, wrong password
+  and email-not-found all return `401` with `"Invalid username or password"`.
+- Disabled accounts return `403` only after a correct password.
+
+**Lockout** (in-memory, per process): 5 failed attempts for the same
+`username+IP` inside 15 minutes lock that pair for 15 minutes. While locked the
+endpoint returns `429 TOO_MANY_ATTEMPTS` with `details.retryAfterSeconds`. A
+successful login clears the counter. Counters reset when the process restarts;
+move them to Redis for a multi-instance deployment.
+
+### Password policy
+
+Enforced by zod on registration, staff creation, password change and admin reset:
+
+- 10–128 characters
+- at least one letter, one number and one symbol
+- no character repeated four or more times in a row
+- a small blocklist of predictable passwords (`password123`, `qwertyuiop`, …)
+
+Validation errors list the specific rule that failed; login errors stay generic.
 
 Coupons: `FESTIVE20` (20% off, min $40), `WELCOME10` (10%, min $25), `DANCE15` (15%, dance costumes only), `BRIDAL25`, `FREESHIP`, `JEWEL12`, `DIWALI18` (expired), `KIDS10` (kids wear only).
 
@@ -94,8 +179,11 @@ Seed counts drift slightly as you exercise the API.
 backend/
 ├── prisma/
 │   ├── schema.prisma            # 46 models, string “enums”, integer money
-│   ├── migrations/              # init + marketplace_p2p_rentals
+│   ├── migrations/              # init + marketplace_p2p_rentals + username_auth
 │   └── seed.ts                  # deterministic catalogue, sellers, payouts, rentals
+├── deploy/                     # nginx.conf + Caddyfile for /backoffice
+├── scripts/copy-admin-dist.mjs  # admin dist → public/backoffice
+├── public/backoffice/          # built console served at /backoffice/
 ├── src/
 │   ├── server.ts                # process entry, graceful shutdown
 │   ├── app.ts                   # plugins, hooks, error envelope, route tree
@@ -169,7 +257,7 @@ Access tokens are short-lived (`ACCESS_TOKEN_TTL`, default 15m) and carry a sess
 
 46 Prisma models, normalised (no JSON blobs used as the primary store):
 
-- **Identity**: `User` (roles, `isActive`, phone, title), `RefreshSession` (hashed token, rotation chain, revoke reason), `Address`
+- **Identity**: `User` (unique lowercase `username` + email, roles, `isActive`, phone, title), `RefreshSession` (hashed token, rotation chain, revoke reason), `Address`
 - **Catalogue**: `Category` (parent/child, `sortOrder`, `isVisible`), `Vendor`, `Product` (slug, status, buy/rent flags, rent daily/weekly/deposit, MRP), `ProductImage`, `ProductTag`, `ProductAttribute`, `ProductVariant` (unique SKU, per-SKU price, stock, reserved, threshold, rent window)
 - **Inventory**: `StockAdjustment` (immutable ledger: delta, reason, before/after, actor), `StockReservation` (order, variant, quantity, status, rental window)
 - **Commerce**: `Cart`, `CartItem` (buy/rent mode, rental dates), `Order`, `OrderItem` (price **snapshot**), `Payment`, `Refund`, `WebhookEvent` (unique `provider + eventId`), `OrderStatusEvent` (timeline), `Address` (shipping snapshot)
@@ -581,8 +669,94 @@ Coverage:
 | `tests/checkout.test.ts` | guest cart CRUD, coupon validation (valid/unknown/min-spend/category), apply/remove coupon totals, reservation at checkout, decrement on payment, confirm idempotency, illegal transitions 409, cancel releases reservation, provider stub 503, empty-cart 400 |
 | `tests/webhook.test.ts` | invalid signature 401, signed success settles once, duplicate eventId is not reprocessed, failed payment does not settle |
 | `tests/marketplace.test.ts` | overlapping rental booking rejected 409 (adjacent start allowed), illegal booking transition 409 with `allowedTransitions`, deposit capture above authorized 409, deposit release idempotency (single release ledger row), per-seller commission + payout preview/generate/mark-paid math, Fulfilment 403 on payout money endpoints but allowed dispatch/inspection transitions, suspended seller blocked from publishing new listings, public sellers exclude suspended/rejected |
+| `tests/auth-username.test.ts` | username login (no password hash in payload), email fallback and `/backoffice/api/v1` alias, case-insensitive match, identical generic error for wrong password vs unknown user, refresh rotation + reuse rejection, lockout 429 after 5 failures with `retryAfterSeconds`, password-policy rejection (length/number/symbol) on register and admin reset |
 
-Result: **6 files / 39 tests passing** (32 pre-existing + 7 marketplace/rental).
+Result: **7 files / 46 tests passing** (39 pre-existing + 7 username/lockout/policy).
+
+---
+
+## Deployment — fabulous.fospe.com
+
+Target shape:
+
+```
+https://fabulous.fospe.com/backoffice/            → console
+https://fabulous.fospe.com/backoffice/api/v1/...  → API
+https://fabulous.fospe.com/                      → storefront (unchanged)
+```
+
+The Fastify process serves the console and the API; the storefront stays on its
+own upstream at the root.
+
+### Environment
+
+| Variable | Value |
+| --- | --- |
+| `PORT` | `4000` |
+| `HOST` | `127.0.0.1` (set `0.0.0.0` only inside a container) |
+| `DATABASE_URL` | production Postgres URL (see “SQLite → Postgres”) |
+| `ADMIN_CONSOLE_DIR` | `./public/backoffice` (default) |
+| `JWT_SECRET` / `REFRESH_SECRET` | strong unique secrets (`openssl rand -hex 32`) |
+| `ACCESS_TOKEN_TTL` | e.g. `15m` |
+| `REFRESH_TOKEN_TTL_DAYS` | e.g. `30` |
+| `PUBLIC_BASE_URL` | `https://fabulous.fospe.com` (used by the OpenAPI servers and media URLs) |
+| `CORS_ORIGINS` | `https://fabulous.fospe.com` (the same-origin console needs no CORS; list it for direct API clients) |
+
+Build and start:
+
+```bash
+cd backend
+npm ci
+npm run build:backoffice      # admin build → public/backoffice
+npm run build                 # tsc → dist
+npx prisma migrate deploy
+npm run seed                  # first install only
+node dist/server.js           # or: npm run start:backoffice
+```
+
+Health check: `GET /health` (liveness) and `GET /ready` (DB `SELECT 1`).
+Do not route `/backoffice/api` to a CDN/static handler — it must reach Fastify so
+the SPA fallback cannot swallow API 404s.
+
+### systemd unit
+
+```ini
+[Unit]
+Description=Fabulous Cartz back office + API
+After=network.target
+
+[Service]
+Type=simple
+User=fabulous
+WorkingDirectory=/opt/fabulous/backend
+EnvironmentFile=/opt/fabulous/backend/.env
+ExecStart=/usr/bin/node dist/server.js
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
+```
+
+### pm2
+
+```bash
+pm2 start dist/server.js --name fabulous-api --update-env
+pm2 save
+pm2 startup
+```
+
+### Reverse proxy
+
+Samples live in the repo:
+
+- [`deploy/nginx.conf`](deploy/nginx.conf) — TLS, `/backoffice/api/` before `/backoffice`, legacy `/api/`, storefront at `/`.
+- [`deploy/Caddyfile`](deploy/Caddyfile) — `handle /backoffice* { reverse_proxy 127.0.0.1:4000 }`, `/api/*`, `/docs*`, health, storefront at `/`.
+
+Both preserve the URI, so the backend receives `/backoffice/api/v1/...` exactly
+as requested. `/backoffice` → `/backoffice/` is handled by the backend itself.
 
 ---
 
@@ -624,7 +798,10 @@ No application code changes are required; the services only use Prisma's typed A
 - **Payouts do not move money.** `Payout` transitions (`pending → processing → paid → failed`) and the mark-paid reference are bookkeeping; disbursement via Stripe Connect/PayPal/bank rails is out of scope.
 - **Rental messaging is booking notes only** (`BookingNote`), not a real-time chat channel; notifications use the mock outbox like the rest of the app.
 - **Overdue handling** is a manual `POST /admin/rentals/overdue/sweep` (grace period + per-day late fee + admin flag); schedule it with a worker/cron in production.
-- **Rate limiting** is not enabled (`@fastify/rate-limit` is the drop-in next step) — required before public launch.
+- **Rate limiting** is not enabled globally (`@fastify/rate-limit` is the drop-in next step) — required before public launch. Login has its own in-memory username+IP lockout.
+- **Console token storage** is `localStorage` (bearer tokens), so XSS on the console origin is the trust boundary; cookies would require CSRF protection. `/backoffice` and `/backoffice/api` share an origin, so no CORS/mixed-content path is involved.
+- **Notification drawer** still calls the console's original `/notifications` contract; the backend exposes `/admin/notifications` with a different envelope. Non-blocking 404 in the drawer until the adapter is pointed at `/admin/notifications`.
+- **Some console screens still use the bundled mock envelope.** The default dashboard calls `/dashboard` (not implemented by this API; it exposes `/admin/analytics/*`) and some marketplace/rental screens read `admin/server` field names (`number`, `listingTitle`, `state`, …) instead of this API's (`bookingNumber`, `listing.title`, `status`, …). Requests reach the mounted API and return `200`, but those screens render an offline card or empty rows until the adapters are mapped. Auth, navigation, sellers/payouts/listing screens and the URL mount are unaffected.
 - **Audit coverage** is complete for admin mutations, auth and payments; high-volume customer cart/wishlist churn is intentionally not written to `AuditLog`.
 - **Refresh tokens** are stored hashed but sessions are not bound to device/IP metadata.
 - **Test DB** is SQLite and recreated per run; it does not prove Postgres behaviour.

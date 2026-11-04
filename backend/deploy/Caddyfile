@@ -1,0 +1,40 @@
+# Caddyfile for fabulous.fospe.com
+# Run: caddy run --config deploy/Caddyfile
+#
+# One upstream serves the console (/backoffice), its API (/backoffice/api)
+# and the legacy /api/v1 prefix. The storefront keeps the root path.
+
+fabulous.fospe.com {
+	encode zstd gzip
+
+	# Console + mounted API. Caddy preserves the URI, so the backend sees
+	# /backoffice/... exactly as the browser requested it.
+	handle /backoffice* {
+		reverse_proxy 127.0.0.1:4000 {
+			health_uri /health
+			health_interval 30s
+		}
+	}
+
+	# Existing clients on the historical prefix.
+	handle /api/* {
+		reverse_proxy 127.0.0.1:4000
+	}
+
+	handle /docs* {
+		reverse_proxy 127.0.0.1:4000
+	}
+
+	handle /health {
+		reverse_proxy 127.0.0.1:4000
+	}
+
+	handle /ready {
+		reverse_proxy 127.0.0.1:4000
+	}
+
+	# Storefront stays at the root (static build or its own dev/preview server).
+	handle / {
+		reverse_proxy 127.0.0.1:5173
+	}
+}

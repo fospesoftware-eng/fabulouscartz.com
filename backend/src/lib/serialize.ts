@@ -125,6 +125,7 @@ export function serializeProductDetail(product: ProductDetail) {
 export function serializeUser(user: {
   id: string;
   email: string;
+  username?: string | null;
   firstName: string;
   lastName: string | null;
   role: string;
@@ -137,6 +138,7 @@ export function serializeUser(user: {
   return {
     id: user.id,
     email: user.email,
+    username: user.username ?? null,
     firstName: user.firstName,
     lastName: user.lastName,
     name: [user.firstName, user.lastName].filter(Boolean).join(" "),

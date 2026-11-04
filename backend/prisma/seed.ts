@@ -222,9 +222,9 @@ async function main(): Promise<void> {
     "fulfilment@fabulouscartz.com": "Fulfil#2026",
   };
   const staff = [
-    { id: "usr_admin", email: "admin@fabulouscartz.com", name: "Aarav Mehta", role: "admin", title: "Admin" },
-    { id: "usr_manager", email: "manager@fabulouscartz.com", name: "Priya Nair", role: "manager", title: "Manager" },
-    { id: "usr_fulfilment", email: "fulfilment@fabulouscartz.com", name: "Rohan Das", role: "fulfilment", title: "Fulfilment" },
+    { id: "usr_admin", email: "admin@fabulouscartz.com", name: "Aarav Mehta", role: "admin", title: "Admin", username: "admin" },
+    { id: "usr_manager", email: "manager@fabulouscartz.com", name: "Priya Nair", role: "manager", title: "Manager", username: "manager" },
+    { id: "usr_fulfilment", email: "fulfilment@fabulouscartz.com", name: "Rohan Das", role: "fulfilment", title: "Fulfilment", username: "fulfilment" },
   ];
   for (const [index, person] of staff.entries()) {
     const [firstName, ...rest] = person.name.split(" ");
@@ -232,6 +232,7 @@ async function main(): Promise<void> {
       data: {
         id: person.id,
         email: person.email,
+        username: person.username,
         passwordHash: await bcrypt.hash(staffPasswords[person.email], 10),
         firstName,
         lastName: rest.join(" ") || null,
@@ -255,6 +256,7 @@ async function main(): Promise<void> {
       data: {
         id: `cus_${String(index + 1).padStart(3, "0")}`,
         email,
+        username: handle,
         passwordHash: customerPassword,
         firstName,
         lastName: rest.join(" ") || null,
@@ -310,6 +312,7 @@ async function main(): Promise<void> {
       data: {
         id: seller.ownerId,
         email: `seller${index + 1}@fabulouscartz.com`,
+        username: seller.slug,
         passwordHash: customerPassword,
         firstName,
         lastName: rest.join(" ") || null,

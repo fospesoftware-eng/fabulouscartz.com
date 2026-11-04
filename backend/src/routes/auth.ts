@@ -11,23 +11,43 @@ import {
   verifyPassword,
 } from "../lib/auth.js";
 import { getActor, requireActor } from "../lib/guards.js";
-import { conflict, forbidden, unauthorized } from "../lib/errors.js";
+import { AppError, conflict, forbidden, unauthorized } from "../lib/errors.js";
 import { serializeUser } from "../lib/serialize.js";
 import { recordAudit } from "../lib/audit.js";
 import { enqueueNotification } from "../services/notifications.js";
+import { passwordSchema } from "../lib/password.js";
+import {
+  clearLoginFailures,
+  lockedSeconds,
+  loginThrottleKey,
+  recordLoginFailure,
+} from "../lib/login-throttle.js";
+import { USERNAME_PATTERN, allocateUsername, normalizeUsername, usernameFromEmail } from "../lib/username.js";
 
-const password = z.string().min(8).max(128);
+const password = passwordSchema;
 const registerSchema = z.object({
   email: z.string().email(),
+  username: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .regex(USERNAME_PATTERN, "Username must be 3–32 characters using letters, numbers, dot, underscore or dash")
+    .optional(),
   password,
   firstName: z.string().min(1).max(80),
   lastName: z.string().max(80).optional(),
   phone: z.string().max(30).optional(),
 });
-const loginSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(1),
-});
+const loginSchema = z
+  .object({
+    username: z.string().trim().min(1).max(64).optional(),
+    email: z.string().email().optional(),
+    password: z.string().min(1),
+  })
+  .refine((value) => Boolean(value.username || value.email), {
+    message: "Provide a username (or an email for legacy clients)",
+    path: ["username"],
+  });
 const refreshSchema = z.object({ refreshToken: z.string().min(10) });
 const profileSchema = z.object({
   firstName: z.string().min(1).max(80).optional(),
@@ -48,10 +68,12 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
       const email = input.email.toLowerCase();
       const existing = await prisma.user.findUnique({ where: { email } });
       if (existing) throw conflict("An account with this email already exists");
+      const username = await allocateUsername(input.username ?? usernameFromEmail(email));
 
       const user = await prisma.user.create({
         data: {
           email,
+          username,
           passwordHash: await hashPassword(input.password),
           firstName: input.firstName,
           lastName: input.lastName ?? null,
@@ -91,15 +113,38 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
 
   app.post(
     "/auth/login",
-    { schema: { tags: ["Auth"], summary: "Login with email and password" } },
+    { schema: { tags: ["Auth"], summary: "Login with username (email fallback) and password" } },
     async (request, reply) => {
       const input = parse(loginSchema, request.body);
-      const user = await prisma.user.findUnique({ where: { email: input.email.toLowerCase() } });
-      if (!user) throw unauthorized("Invalid email or password");
+      const identifier = normalizeUsername(input.username ?? input.email ?? "");
+      const throttleKey = loginThrottleKey(identifier, request.ip);
+      const lock = lockedSeconds(throttleKey);
+      if (lock !== null) {
+        throw new AppError(
+          429,
+          "TOO_MANY_ATTEMPTS",
+          `Too many failed attempts. Try again in ${lock} seconds.`,
+          { retryAfterSeconds: lock },
+        );
+      }
+
+      const user = input.username
+        ? await prisma.user.findUnique({ where: { username: identifier } })
+        : await prisma.user.findUnique({ where: { email: (input.email ?? "").toLowerCase() } });
+
+      // Identical message for unknown user and wrong password: no enumeration.
+      if (!user) {
+        recordLoginFailure(throttleKey);
+        throw unauthorized("Invalid username or password");
+      }
       const valid = await verifyPassword(input.password, user.passwordHash);
-      if (!valid) throw unauthorized("Invalid email or password");
+      if (!valid) {
+        recordLoginFailure(throttleKey);
+        throw unauthorized("Invalid username or password");
+      }
       if (!user.isActive) throw forbidden("This account is disabled");
 
+      clearLoginFailures(throttleKey);
       await prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
       const tokens = await createSession(user, {
         userAgent: request.headers["user-agent"],

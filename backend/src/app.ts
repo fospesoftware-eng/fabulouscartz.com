@@ -38,6 +38,17 @@ export async function buildApp(): Promise<FastifyInstance> {
     },
     bodyLimit: 6 * 1024 * 1024,
     trustProxy: true,
+    // The console and the API share one origin. Requests under the back-office
+    // mount are transparently rewritten to the historical /api paths, so a
+    // route is registered once and /backoffice/api/v1/... behaves exactly like
+    // /api/v1/... (same handlers, same auth, same OpenAPI paths).
+    rewriteUrl: (request) => {
+      const url = request.url ?? "/";
+      if (url === "/backoffice/api" || url.startsWith("/backoffice/api/") || url.startsWith("/backoffice/api?")) {
+        return url.slice("/backoffice".length);
+      }
+      return url;
+    },
   });
 
   // Capture the raw JSON body for webhook signature verification while still
@@ -224,31 +235,82 @@ export async function buildApp(): Promise<FastifyInstance> {
     });
   });
 
-  await app.register(
-    async (instance) => {
-      await instance.register(authRoutes);
-      await instance.register(catalogRoutes);
-      await instance.register(cartRoutes);
-      await instance.register(checkoutRoutes);
-      await instance.register(paymentRoutes);
-      await instance.register(engagementRoutes);
-      await instance.register(sellerStorefrontRoutes);
-      await instance.register(rentalRoutes);
-    },
-    { prefix: "/api/v1" },
-  );
+  // Registered once. `rewriteUrl` above makes /backoffice/api/v1/... resolve to
+  // these same routes, so the console shares one origin with the API without a
+  // second copy of every route (which also keeps the OpenAPI paths canonical).
+  const apiV1 = async (instance: FastifyInstance) => {
+    await instance.register(authRoutes);
+    await instance.register(catalogRoutes);
+    await instance.register(cartRoutes);
+    await instance.register(checkoutRoutes);
+    await instance.register(paymentRoutes);
+    await instance.register(engagementRoutes);
+    await instance.register(sellerStorefrontRoutes);
+    await instance.register(rentalRoutes);
+  };
+  const apiV1Admin = async (instance: FastifyInstance) => {
+    await instance.register(adminCatalogRoutes);
+    await instance.register(adminOperationsRoutes);
+    await instance.register(adminSystemRoutes);
+    await instance.register(adminSellerRoutes);
+    await instance.register(adminPayoutRoutes);
+    await instance.register(adminRentalRoutes);
+  };
 
-  await app.register(
-    async (instance) => {
-      await instance.register(adminCatalogRoutes);
-      await instance.register(adminOperationsRoutes);
-      await instance.register(adminSystemRoutes);
-      await instance.register(adminSellerRoutes);
-      await instance.register(adminPayoutRoutes);
-      await instance.register(adminRentalRoutes);
-    },
-    { prefix: "/api/v1/admin" },
-  );
+  await app.register(apiV1, { prefix: "/api/v1" });
+  await app.register(apiV1Admin, { prefix: "/api/v1/admin" });
+
+  // The admin console build is served from this directory. When it is absent
+  // (API-only deployments) /backoffice returns a short JSON hint instead of 404.
+  const consoleRoot = path.resolve(config.ADMIN_CONSOLE_DIR);
+  const consoleIndex = path.join(consoleRoot, "index.html");
+  const consoleReady = fs.existsSync(consoleIndex);
+
+  if (consoleReady) {
+    await app.register(staticPlugin, {
+      root: consoleRoot,
+      prefix: "/backoffice/",
+      wildcard: false,
+      index: ["index.html"],
+    });
+
+    app.get("/backoffice", { schema: { hide: true } }, async (_request, reply) =>
+      reply.redirect("/backoffice/"),
+    );
+
+    // SPA fallback: real files are served above, every other console path gets
+    // index.html so deep links (/backoffice/rentals/bookings) never 404.
+    app.get("/backoffice/*", { schema: { hide: true } }, async (request, reply) => {
+      const wildcard = (request.params as { "*": string })["*"] ?? "";
+      if (wildcard.startsWith("api/")) {
+        return reply.status(404).send({
+          error: {
+            code: "NOT_FOUND",
+            message: `API route /backoffice/${wildcard} not found`,
+            requestId: request.id,
+          },
+        });
+      }
+      const candidate = path.resolve(consoleRoot, wildcard);
+      if (
+        candidate.startsWith(consoleRoot) &&
+        fs.existsSync(candidate) &&
+        fs.statSync(candidate).isFile()
+      ) {
+        return reply.sendFile(wildcard, consoleRoot);
+      }
+      return reply.type("text/html; charset=utf-8").send(fs.readFileSync(consoleIndex, "utf8"));
+    });
+  } else {
+    app.get("/backoffice", { schema: { hide: true } }, async (_request, reply) =>
+      reply.status(503).send({
+        error: {
+          code: "CONSOLE_NOT_BUILT",
+          message: "Admin console not built. Run `npm run build:backoffice`.",
+        },
+      }),
+    );
+  }
 
   if (!config.isTest) {
     app.addHook("onClose", async () => {
