@@ -32,13 +32,9 @@ waitForPort = 5000
 outputType = "webview"
 
 [deployment]
-deploymentTarget = "static"
-build = ["npm", "run", "build"]
-publicDir = "dist"
-
-[[deployment.rewrites]]
-from = "/*"
-to = "/index.html"
+deploymentTarget = "autoscale"
+build = ["npm", "run", "build:deploy"]
+run = ["npm", "run", "start:deploy"]
 
 [[ports]]
 localPort = 5000

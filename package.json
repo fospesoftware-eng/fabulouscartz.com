@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:deploy": "npm run build && npm --prefix admin run build && node backend/scripts/copy-admin-dist.mjs && npm --prefix backend run generate && npm --prefix backend run build",
+    "start:deploy": "node backend/scripts/deploy-start.mjs",
     "lint": "oxlint",
     "preview": "vite preview"
   },

@@ -172,15 +172,40 @@ export async function buildApp(): Promise<FastifyInstance> {
     }
   });
 
-  app.setNotFoundHandler(async (request, reply) =>
-    reply.status(404).send({
+  // The built storefront is served at `/` in the combined deployment. SPA deep
+  // links fall through here; API, console, docs and upload paths stay JSON 404s.
+  const storefrontRoot = path.resolve(config.STOREFRONT_DIR);
+  const storefrontIndex = path.join(storefrontRoot, "index.html");
+  const storefrontReady = !config.isTest && fs.existsSync(storefrontIndex);
+
+  app.setNotFoundHandler(async (request, reply) => {
+    const pathname = request.url.split("?")[0] ?? "";
+    const reserved =
+      pathname === "/health" ||
+      pathname === "/ready" ||
+      pathname.startsWith("/api") ||
+      pathname.startsWith("/backoffice") ||
+      pathname.startsWith("/uploads") ||
+      pathname.startsWith("/docs");
+    const acceptsHtml = (request.headers.accept ?? "").includes("text/html");
+    if (
+      storefrontReady &&
+      !reserved &&
+      acceptsHtml &&
+      (request.method === "GET" || request.method === "HEAD")
+    ) {
+      return reply
+        .type("text/html; charset=utf-8")
+        .send(fs.readFileSync(storefrontIndex, "utf8"));
+    }
+    return reply.status(404).send({
       error: {
         code: "NOT_FOUND",
         message: `Route ${request.method} ${request.url} not found`,
         requestId: request.id,
       },
-    }),
-  );
+    });
+  });
 
   app.setErrorHandler(async (error, request, reply) => {
     if (error instanceof AppError) {
@@ -310,6 +335,19 @@ export async function buildApp(): Promise<FastifyInstance> {
         },
       }),
     );
+  }
+
+  // Storefront last so every API, docs, upload and console route above keeps
+  // priority. Vite has already copied public/img into dist, so the console's
+  // `/img/...` asset base resolves here on the same origin.
+  if (storefrontReady) {
+    await app.register(staticPlugin, {
+      root: storefrontRoot,
+      prefix: "/",
+      wildcard: false,
+      index: ["index.html"],
+      decorateReply: false,
+    });
   }
 
   if (!config.isTest) {

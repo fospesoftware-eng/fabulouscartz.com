@@ -14,6 +14,7 @@ const envSchema = z.object({
   PUBLIC_BASE_URL: z.string().default("http://localhost:4000"),
   UPLOAD_DIR: z.string().default("./uploads"),
   ADMIN_CONSOLE_DIR: z.string().default("./public/backoffice"),
+  STOREFRONT_DIR: z.string().default("../dist"),
   MAX_UPLOAD_BYTES: z.coerce.number().int().positive().default(5 * 1024 * 1024),
   PAYMENT_DEFAULT_PROVIDER: z.string().default("mock"),
   MOCK_WEBHOOK_SECRET: z.string().default("mock-webhook-secret"),

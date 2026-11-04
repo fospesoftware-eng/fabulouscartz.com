@@ -10,6 +10,7 @@
     "build:backoffice": "npm --prefix ../admin run build && node scripts/copy-admin-dist.mjs",
     "start:backoffice": "npm run build:backoffice && npm run build && node dist/server.js",
     "start": "node dist/server.js",
+    "generate": "prisma generate",
     "migrate": "prisma migrate dev",
     "migrate:deploy": "prisma migrate deploy",
     "db:push": "prisma db push",

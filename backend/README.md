@@ -746,6 +746,52 @@ https://fabulous.fospe.com/                      → storefront (unchanged)
 The Fastify process serves the console and the API; the storefront stays on its
 own upstream at the root.
 
+### Replit single-service deployment
+
+The published Replit deployment runs **one Fastify process** on the port mapped
+to 80 (5000 locally) and serves everything from it:
+
+```
+/                      built storefront (dist/index.html + /assets + /img)
+/backoffice/           admin console (SPA, deep links included)
+/backoffice/api/v1/    API alias
+/api/v1/               canonical API
+/docs, /health, /ready
+```
+
+Root scripts (run from the repo root):
+
+```bash
+npm run build:deploy   # storefront build → dist, admin build → backend/public/backoffice,
+                       # prisma generate, backend tsc
+npm run start:deploy   # migrate deploy; seed only when the User table is empty; start Fastify
+```
+
+`start:deploy` (`backend/scripts/deploy-start.mjs`) is the deploy entry point.
+It fails with a readable log and a non-zero exit when `JWT_SECRET` /
+`REFRESH_SECRET` are missing or shorter than 16 characters, or when the
+storefront/console bundles were not built.
+
+First boot is self-sufficient: `prisma migrate deploy` creates the SQLite
+database (`backend/prisma/deploy.db` by default, gitignored) and the deterministic
+seed runs only if there are no users. Later boots skip the seed. Storefront
+imagery ships in `dist/img` (Vite copies `public/img`), so the console's `/img`
+asset base resolves on the same origin without a second copy.
+
+Replit Secrets to set (Tools → Secrets):
+
+| Secret | Value |
+| --- | --- |
+| `JWT_SECRET` | strong unique value, ≥16 chars (`openssl rand -hex 32`) |
+| `REFRESH_SECRET` | a different strong value, ≥16 chars |
+| `PUBLIC_BASE_URL` | `https://fabulous.fospe.com` |
+| `CORS_ORIGINS` | optional; defaults to the deployed origin plus localhost dev ports |
+
+Optional overrides: `PORT` (default `5000`), `HOST` (default `0.0.0.0`),
+`DATABASE_URL` (default `file:./deploy.db`), `ADMIN_CONSOLE_DIR`
+(`./public/backoffice`), `STOREFRONT_DIR` (`../dist`). Do not commit `.env`,
+databases, `dist`, `uploads` or `public/backoffice`.
+
 ### Environment
 
 | Variable | Value |

@@ -1,4 +1,20 @@
-# React + TypeScript + Vite
+# Fabulous Cartz
+
+## Production deployment (Replit)
+
+One published service serves the built storefront at `/`, the admin console at
+`/backoffice/` and the API at `/backoffice/api/v1` (and `/api/v1`).
+
+```bash
+npm run build:deploy   # storefront + admin + Prisma client + backend build
+npm run start:deploy   # migrate, seed on first boot, then start Fastify
+```
+
+Set `JWT_SECRET`, `REFRESH_SECRET` and `PUBLIC_BASE_URL=https://fabulous.fospe.com`
+in Replit Secrets before publishing. See [backend/README.md](backend/README.md#replit-single-service-deployment)
+for the full contract, env defaults and troubleshooting.
+
+---
 
 This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
 
